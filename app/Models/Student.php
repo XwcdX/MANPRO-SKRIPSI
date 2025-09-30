@@ -27,6 +27,7 @@ class Student extends Authenticatable implements MustVerifyEmail
         'revision_notes',
         'final_thesis_path',
         'due_date',
+        'is_active',
     ];
 
     protected $hidden = [
@@ -59,17 +60,17 @@ class Student extends Authenticatable implements MustVerifyEmail
     public function supervisors()
     {
         return $this->belongsToMany(Lecturer::class, 'student_lecturers')
-                    ->wherePivotIn('role', [0, 1])
-                    ->wherePivot('status', 'active')
-                    ->withPivot(['role', 'assignment_date', 'status']);
+            ->wherePivotIn('role', [0, 1])
+            ->wherePivot('status', 'active')
+            ->withPivot(['role', 'assignment_date', 'status']);
     }
 
     public function examiners()
     {
         return $this->belongsToMany(Lecturer::class, 'student_lecturers')
-                    ->wherePivot('role', 2)
-                    ->wherePivot('status', 'active')
-                    ->withPivot(['is_lead_examiner', 'assignment_date', 'status']);
+            ->wherePivot('role', 2)
+            ->wherePivot('status', 'active')
+            ->withPivot(['is_lead_examiner', 'assignment_date', 'status']);
     }
 
     public function getStatusTextAttribute()
@@ -85,7 +86,19 @@ class Student extends Authenticatable implements MustVerifyEmail
             7 => 'Thesis Accepted & Waiting Final',
             8 => 'Completed'
         ];
-        
+
         return $statuses[$this->status] ?? 'Unknown';
+    }
+
+    public function activePeriod()
+    {
+        return $this->periods()->wherePivot('is_active', true)->first();
+    }
+
+    public function periods()
+    {
+        return $this->belongsToMany(Period::class, 'student_periods')
+            ->withPivot(['enrollment_date', 'is_active'])
+            ->withTimestamps();
     }
 }

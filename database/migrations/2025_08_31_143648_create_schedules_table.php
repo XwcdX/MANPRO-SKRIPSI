@@ -13,12 +13,14 @@ return new class extends Migration
     {
         Schema::create('schedules', function (Blueprint $table) {
             $table->uuid('id')->primary();
+            $table->foreignUuid('period_id')->after('id')->constrained('periods')->onDelete('restrict');
             $table->date('date');
             $table->time('start_time');
             $table->time('end_time');
             $table->timestamps();
-
+            
             $table->index('date', 'idx_schedules_date');
+            $table->index('period_id', 'idx_supervision_applications_period');
         });
     }
 

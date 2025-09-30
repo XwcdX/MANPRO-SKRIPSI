@@ -73,4 +73,28 @@ Route::prefix('lecturer')->name('lecturer.')->middleware(['auth:lecturer', 'veri
 
 Route::middleware(['auth:student,lecturer', 'throttle:6,1'])->group(function () {
     Volt::route('/email/verify', 'auth.verify-email')->name('verification.notice');
+    Route::get('/email/verify/{id}/{hash}', function (Illuminate\Http\Request $request) {
+        $guard = null;
+        if (auth('student')->check()) {
+            $guard = 'student';
+        } elseif (auth('lecturer')->check()) {
+            $guard = 'lecturer';
+        }
+
+        $user = auth($guard)->user();
+
+        if (!hash_equals((string) $request->route('hash'), sha1($user->getEmailForVerification()))) {
+            abort(403);
+        }
+
+        if ($user->hasVerifiedEmail()) {
+            return redirect()->route($guard . '.dashboard');
+        }
+
+        if ($user->markEmailAsVerified()) {
+            event(new Illuminate\Auth\Events\Verified($user));
+        }
+
+        return redirect()->route($guard . '.dashboard')->with('verified', true);
+    })->middleware('signed')->name('verification.verify');
 });

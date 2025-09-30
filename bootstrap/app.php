@@ -13,17 +13,24 @@ return Application::configure(basePath: dirname(__DIR__))
     )
     ->withMiddleware(function (Middleware $middleware) {
         $middleware->alias([
-            'role' => \App\Http\Middleware\CheckUserRole    ::class
+            'role' => \App\Http\Middleware\CheckUserRole::class
         ]);
 
         $middleware->redirectGuestsTo(function ($request) {
             if ($request->expectsJson()) {
                 return null;
             }
-            if ($request->is('lecturer/*')) {
+            return route('login');
+        });
+
+        $middleware->redirectUsersTo(function ($request) {
+            if (auth('student')->check()) {
+                return route('student.dashboard');
+            }
+            if (auth('lecturer')->check()) {
                 return route('lecturer.dashboard');
             }
-            return route('student.dashboard');
+            return route('login');
         });
     })
     ->withExceptions(function (Exceptions $exceptions) {
