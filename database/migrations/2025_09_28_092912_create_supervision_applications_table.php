@@ -12,7 +12,7 @@ return new class extends Migration {
     {
         Schema::create('supervision_applications', function (Blueprint $table) {
             $table->uuid('id')->primary();
-            $table->foreignUuid('period_id')->after('id')->constrained('periods')->onDelete('restrict');
+            $table->foreignUuid('period_id')->constrained('periods')->onDelete('restrict');
             $table->foreignUuid('student_id')->constrained('students')->onDelete('cascade');
             $table->foreignUuid('lecturer_id')->constrained('lecturers')->onDelete('cascade');
             $table->tinyInteger('proposed_role')->comment('0=Supervisor 1, 1=Supervisor 2');

@@ -13,8 +13,7 @@ return new class extends Migration {
         Schema::create('lecturer_topics', function (Blueprint $table) {
             $table->uuid('id')->primary();
             $table->foreignUuid('lecturer_id')->constrained('lecturers')->onDelete('cascade');
-            $table->foreignUuid('period_id')->after('lecturer_id')
-                ->constrained('periods')->onDelete('cascade')
+            $table->foreignUuid('period_id')->constrained('periods')->onDelete('cascade')
                 ->comment('Topics are period-specific');
             $table->string('topic');
             $table->text('description')->nullable();
