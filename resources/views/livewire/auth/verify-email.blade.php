@@ -35,9 +35,9 @@ new #[Layout('components.layouts.auth')] class extends Component {
             <span wire:loading wire:target="sendVerification">{{ __('Sending...') }}</span>
         </flux:button>
 
-        <form method="POST" action="{{ route($activeGuard . '.logout') }}" class="w-full">
+        <form method="POST" action="{{ route('logout') }}" class="w-full">
             @csrf
-            <flux:button type="submit" variant="secondary" class="w-full">
+            <flux:button type="submit" class="w-full">
                 {{ __('Log Out') }}
             </flux:button>
         </form>

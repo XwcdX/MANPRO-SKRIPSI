@@ -1,8 +1,10 @@
 <?php
+
+use App\Http\Controllers\Auth\AuthController;
 use Illuminate\Support\Facades\Route;
 use Livewire\Volt\Volt;
 
-Route::middleware('guest')->group(function () {
+Route::middleware('guest:student,lecturer')->group(function () {
     Volt::route('/', 'auth.login')->name('home');
     Volt::route('login', 'auth.login')->name('login');
     Volt::route('password/reset', 'auth.password.request')->name('password.request');
@@ -70,6 +72,8 @@ Route::prefix('lecturer')->name('lecturer.')->middleware(['auth:lecturer', 'veri
     Volt::route('profile', 'lecturer.profile')->name('profile');
     Volt::route('settings', 'lecturer.settings')->name('settings');
 });
+
+Route::post('logout', [AuthController::class, 'logout'])->name('logout');
 
 Route::middleware(['auth:student,lecturer', 'throttle:6,1'])->group(function () {
     Volt::route('/email/verify', 'auth.verify-email')->name('verification.notice');

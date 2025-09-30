@@ -39,6 +39,18 @@ class Lecturer extends Authenticatable implements MustVerifyEmail
         'is_active' => 'boolean',
     ];
 
+    public function initials(): string
+    {
+        $words = explode(' ', $this->name);
+        $initials = mb_substr($words[0], 0, 1);
+
+        if (count($words) > 1) {
+            $initials .= mb_substr(end($words), 0, 1);
+        }
+
+        return strtoupper($initials);
+    }
+
     public function division()
     {
         return $this->belongsTo(Division::class);
@@ -47,20 +59,20 @@ class Lecturer extends Authenticatable implements MustVerifyEmail
     public function students()
     {
         return $this->belongsToMany(Student::class, 'student_lecturers')
-                    ->withPivot(['role', 'is_lead_examiner', 'assignment_date', 'status']);
+            ->withPivot(['role', 'is_lead_examiner', 'assignment_date', 'status']);
     }
 
     public function activeSupervisions()
     {
         return $this->belongsToMany(Student::class, 'student_lecturers')
-                    ->wherePivotIn('role', [0, 1])
-                    ->wherePivot('status', 'active');
+            ->wherePivotIn('role', [0, 1])
+            ->wherePivot('status', 'active');
     }
 
     public function schedules()
     {
         return $this->belongsToMany(Schedule::class, 'lecturer_schedules')
-                    ->withPivot(['status', 'notes']);
+            ->withPivot(['status', 'notes']);
     }
 
     public function getTitleTextAttribute()
@@ -71,7 +83,7 @@ class Lecturer extends Authenticatable implements MustVerifyEmail
             2 => 'Head of Division',
             3 => 'Head of Thesis Department'
         ];
-        
+
         return $titles[$this->title] ?? 'Unknown';
     }
 

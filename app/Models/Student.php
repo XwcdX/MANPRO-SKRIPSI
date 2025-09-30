@@ -42,6 +42,18 @@ class Student extends Authenticatable implements MustVerifyEmail
         'status' => 'integer',
     ];
 
+    public function initials(): string
+    {
+        $words = explode(' ', $this->name);
+        $initials = mb_substr($words[0], 0, 1);
+
+        if (count($words) > 1) {
+            $initials .= mb_substr(end($words), 0, 1);
+        }
+
+        return strtoupper($initials);
+    }
+
     public function thesisPresentations()
     {
         return $this->hasMany(ThesisPresentation::class);

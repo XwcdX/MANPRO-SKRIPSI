@@ -18,14 +18,7 @@ new #[Layout('components.layouts.auth')] class extends Component {
     #[Validate('required|string')]
     public string $password = '';
 
-    public ?string $secret_login = null;
-
     public bool $remember = false;
-
-    public function mount(): void
-    {
-        $this->secret_login = env('SECRET_LOGIN');
-    }
 
     public function login(AuthService $authService): void
     {
@@ -43,10 +36,16 @@ new #[Layout('components.layouts.auth')] class extends Component {
             ]);
         }
 
-        Session::regenerate();
-
         $redirectRoute = $guard === 'student' ? 'student.dashboard' : 'lecturer.dashboard';
-        $this->redirect(url: route($redirectRoute, absolute: false), navigate: true);
+        \Log::info('About to redirect', [
+            Auth::user(),
+            session()->all(),
+            'user' => $user,
+            'route' => $redirectRoute,
+            'url' => route($redirectRoute),
+            'auth_check' => auth('student')->check(),
+        ]);
+        $this->redirect(route($redirectRoute), navigate: false);
     }
 }; ?>
 
