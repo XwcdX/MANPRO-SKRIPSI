@@ -2,6 +2,7 @@
 
 namespace Tests;
 
+use Illuminate\Foundation\Testing\Concerns\InteractsWithAuthentication;
 use Illuminate\Foundation\Testing\TestCase as BaseTestCase;
 use Illuminate\Foundation\Testing\Concerns\MakesHttpRequests;
 use Livewire\Features\SupportTesting\Testable;
@@ -13,4 +14,6 @@ use Livewire\Features\SupportTesting\Testable;
 abstract class TestCase extends BaseTestCase
 {
     use CreatesApplication;
+    use MakesHttpRequests;
+    use InteractsWithAuthentication;
 }
