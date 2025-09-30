@@ -20,7 +20,7 @@ return new class extends Migration
             $table->timestamps();
             
             $table->index('date', 'idx_schedules_date');
-            $table->index('period_id', 'idx_supervision_applications_period');
+            $table->index('period_id', 'idx_schedule_period');
         });
     }
 

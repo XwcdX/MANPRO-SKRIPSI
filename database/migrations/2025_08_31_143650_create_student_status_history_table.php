@@ -19,6 +19,8 @@ return new class extends Migration {
             $table->foreignUuid('changed_by')->nullable()->comment('Lecturer who made the change')->constrained('lecturers')->onDelete('set null');
             $table->text('reason')->nullable();
             $table->timestamp('created_at')->useCurrent();
+
+            $table->index('period_id', 'idx_student_status_history_period');
         });
     }
 
