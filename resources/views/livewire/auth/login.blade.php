@@ -18,7 +18,7 @@ new #[Layout('components.layouts.auth')] class extends Component {
     #[Validate('required|string')]
     public string $password = '';
 
-    public string $secret_login = '';
+    public ?string $secret_login = null;
 
     public bool $remember = false;
 
