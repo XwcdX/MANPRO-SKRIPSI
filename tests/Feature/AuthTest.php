@@ -14,7 +14,7 @@ use Illuminate\Foundation\Testing\RefreshDatabase;
 | This is crucial for authentication tests.
 |
 */
-uses(RefreshDatabase::class, \Tests\TestCase::class);
+uses(RefreshDatabase::class);
 /*
 |--------------------------------------------------------------------------
 | Authentication Tests for Students
