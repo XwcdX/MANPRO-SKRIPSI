@@ -43,8 +43,6 @@ class MakeServiceCommand extends Command
 
 namespace App\Services;
 
-use App\Models\\{$name};
-
 class {$name}
 {
     public function __construct({$name} \$model)
