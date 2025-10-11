@@ -5,28 +5,37 @@ namespace App\Services;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Facades\DB;
 
-abstract class BaseService
+class CrudService
 {
-    protected Model $model;
+    protected ?Model $model = null;
 
-    public function __construct(Model $model)
+    public function setModel(Model $model): self
     {
         $this->model = $model;
+        return $this;
+    }
+
+    protected function getModel(): Model
+    {
+        if (!$this->model) {
+            throw new Exception("Model belum di-set. Jalankan setModel() terlebih dahulu.");
+        }
+        return $this->model;
     }
 
     public function all()
     {
-        return $this->model->all();
+        return $this->getModel()->all();
     }
 
     public function find($id)
     {
-        return $this->model->findOrFail($id);
+        return $this->getModel()->findOrFail($id);
     }
 
     public function create(array $data)
     {
-        return $this->model->create($data);
+        return $this->getModel()->create($data);
     }
 
     public function update($id, array $data)
