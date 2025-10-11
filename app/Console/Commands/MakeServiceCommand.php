@@ -45,11 +45,6 @@ namespace App\Services;
 
 class {$name}
 {
-    public function __construct({$name} \$model)
-    {
-        parent::__construct(\$model);
-    }
-
     // Add new function here
 }
 PHP;
