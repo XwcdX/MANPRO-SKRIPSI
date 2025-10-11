@@ -19,7 +19,7 @@ class MakeServiceCommand extends Command
      *
      * @var string
      */
-    protected $description = 'Create new service extending BaseService';
+    protected $description = 'Create new service';
 
     /**
      * Execute the console command.
@@ -45,7 +45,7 @@ namespace App\Services;
 
 use App\Models\\{$name};
 
-class {$name}Service extends BaseService
+class {$name}
 {
     public function __construct({$name} \$model)
     {

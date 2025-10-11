@@ -5,7 +5,7 @@ namespace App\Services;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Facades\DB;
 
-abstract class BaseService
+abstract class CrudService
 {
     protected Model $model;
 
