@@ -69,6 +69,15 @@ Route::prefix('lecturer')->name('lecturer.')->middleware(['auth:lecturer', 'veri
         Volt::route('reports/analytics', 'lecturer.reports.analytics')->name('reports.analytics');
     });
 
+    Route::middleware('permission:manage-roles,lecturer')->group(function () {
+        Volt::route('roles', 'lecturer.roles.index')->name('roles.index');
+        Volt::route('roles/create', 'lecturer.roles.create')->name('roles.create');
+        Volt::route('roles/{role}/edit', 'lecturer.roles.edit')->name('roles.edit');
+
+        Volt::route('lecturers/roles', 'lecturer.assignments.index')->name('assignments.index');
+        Volt::route('lecturers/{lecturer}/roles', 'lecturer.assignments.edit')->name('assignments.edit');
+    });
+
     Volt::route('profile', 'lecturer.profile')->name('profile');
     Volt::route('settings', 'lecturer.settings')->name('settings');
 });

@@ -2,78 +2,53 @@
 
 namespace Database\Seeders;
 
+use App\Models\Lecturer;
 use Illuminate\Database\Seeder;
 use Spatie\Permission\Models\Permission;
 use Spatie\Permission\Models\Role;
+use Spatie\Permission\PermissionRegistrar;
 
 class PermissionSeeder extends Seeder
 {
     public function run()
     {
-        // Reset cached roles and permissions
-        app()[\Spatie\Permission\PermissionRegistrar::class]->forgetCachedPermissions();
+        app()[PermissionRegistrar::class]->forgetCachedPermissions();
 
-        // Create permissions for lecturer guard
+        $guardName = 'lecturer';
+
         $permissions = [
             // Student management
-            'view-students',
-            'edit-student-status',
-            'assign-supervisors',
-            'view-student-details',
+            'view-students', 'edit-student-status', 'assign-supervisors', 'view-student-details',
             
             // Thesis management
-            'approve-thesis-title',
-            'decline-thesis-title',
-            'schedule-presentation',
-            'evaluate-thesis',
-            'add-revision-notes',
+            'approve-thesis-title', 'decline-thesis-title', 'schedule-presentation', 'evaluate-thesis', 'add-revision-notes',
             
             // Schedule management
-            'manage-schedules',
-            'set-availability',
-            'view-all-schedules',
+            'manage-schedules', 'set-availability', 'view-all-schedules',
             
             // Division management (for heads)
-            'manage-division',
-            'assign-examiners',
-            'view-division-reports',
+            'manage-division', 'assign-examiners', 'view-division-reports',
             
             // System administration
-            'manage-lecturers',
-            'view-system-reports',
-            'manage-venues',
+            'manage-lecturers', 'view-system-reports', 'manage-venues',
+
+            // RBAC - The most powerful permission
+            'manage-roles',
         ];
 
-        foreach ($permissions as $permission) {
-            Permission::create([
-                'name' => $permission,
-                'guard_name' => 'lecturer'
-            ]);
+        foreach ($permissions as $permissionName) {
+            Permission::firstOrCreate(['name' => $permissionName, 'guard_name' => $guardName]);
         }
+        $this->command->info('Lecturer permissions created or verified successfully.');
 
-        // Create roles based on lecturer titles
-        $supervisorRole = Role::create([
-            'name' => 'supervisor',
-            'guard_name' => 'lecturer'
-        ]);
-        
-        $seniorSupervisorRole = Role::create([
-            'name' => 'senior-supervisor',
-            'guard_name' => 'lecturer'
-        ]);
-        
-        $headDivisionRole = Role::create([
-            'name' => 'head-division',
-            'guard_name' => 'lecturer'
-        ]);
-        
-        $headThesisRole = Role::create([
-            'name' => 'head-thesis',
-            'guard_name' => 'lecturer'
-        ]);
+        $headThesisRole = Role::firstOrCreate(['name' => 'Head of Thesis Department', 'guard_name' => $guardName]);
+        $headDivisionRole = Role::firstOrCreate(['name' => 'Head of Division', 'guard_name' => $guardName]);
+        $seniorSupervisorRole = Role::firstOrCreate(['name' => 'Senior Supervisor', 'guard_name' => $guardName]);
+        $supervisorRole = Role::firstOrCreate(['name' => 'Supervisor', 'guard_name' => $guardName]);
 
-        // Assign permissions to roles
-        $supervisorRole->givePermissionTo([
+        $this->command->info('Core roles created or verified successfully.');
+
+        $supervisorRole->syncPermissions([
             'view-students',
             'view-student-details',
             'add-revision-notes',
@@ -81,7 +56,7 @@ class PermissionSeeder extends Seeder
             'view-all-schedules',
         ]);
 
-        $seniorSupervisorRole->givePermissionTo([
+        $seniorSupervisorRole->syncPermissions([
             'view-students',
             'edit-student-status',
             'view-student-details',
@@ -91,7 +66,7 @@ class PermissionSeeder extends Seeder
             'evaluate-thesis',
         ]);
 
-        $headDivisionRole->givePermissionTo([
+        $headDivisionRole->syncPermissions([
             'view-students',
             'edit-student-status',
             'assign-supervisors',
@@ -109,6 +84,22 @@ class PermissionSeeder extends Seeder
             'view-division-reports',
         ]);
 
-        $headThesisRole->givePermissionTo(Permission::where('guard_name', 'lecturer')->pluck('name'));
+        $headThesisRole->givePermissionTo(Permission::where('guard_name', $guardName)->get());
+
+        $this->command->info('Permissions have been assigned to roles.');
+
+        $adminLecturer = Lecturer::firstOrCreate(
+            ['email' => 'john@peter.petra.ac.id'],
+            [
+                'name' => 'Dr. John Peter',
+                'password' => bcrypt('password'),
+                'email_verified_at' => now(),
+            ]
+        );
+        
+        $adminLecturer->assignRole($headThesisRole);
+
+        $this->command->info('Super Admin user "Dr. John Peter" has been created and assigned the "Head of Thesis Department" role.');
+        $this->command->info('Admin credentials: john@peter.petra.ac.id / password');
     }
 }

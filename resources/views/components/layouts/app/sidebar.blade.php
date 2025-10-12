@@ -5,8 +5,9 @@
     @include('partials.head')
 </head>
 
-<body class="min-h-screen bg-white dark:bg-zinc-800">
-    <flux:sidebar sticky stashable class="border-e border-zinc-200 bg-zinc-50 dark:border-zinc-700 dark:bg-zinc-900 min-h-screen">
+<body class="min-h-screen bg-white dark:bg-zinc-800 lg:overflow-hidden">
+    <flux:sidebar sticky stashable
+        class="border-e border-zinc-200 bg-zinc-50 dark:border-zinc-700 dark:bg-zinc-900 min-h-screen">
         <flux:sidebar.toggle class="lg:hidden" icon="x-mark" />
 
         <a href="{{ route('student.dashboard') }}" class="me-5 flex items-center space-x-2 rtl:space-x-reverse"
@@ -30,13 +31,15 @@
                     :current="request()->routeIs('student.thesis.status')" wire:navigate>{{ __('Thesis Status') }}
                 </flux:navlist.item>
             </flux:navlist.group>
-            
+
             <flux:navlist.group :heading="__('Guidance')" class="grid">
-                 <flux:navlist.item icon="users" :href="route('student.supervisors.select')"
-                    :current="request()->routeIs('student.supervisors.select')" wire:navigate>{{ __('Select Supervisors') }}
+                <flux:navlist.item icon="users" :href="route('student.supervisors.select')"
+                    :current="request()->routeIs('student.supervisors.select')" wire:navigate>
+                    {{ __('Select Supervisors') }}
                 </flux:navlist.item>
-                 <flux:navlist.item icon="user-group" :href="route('student.supervisors.current')"
-                    :current="request()->routeIs('student.supervisors.current')" wire:navigate>{{ __('My Supervisors') }}
+                <flux:navlist.item icon="user-group" :href="route('student.supervisors.current')"
+                    :current="request()->routeIs('student.supervisors.current')" wire:navigate>
+                    {{ __('My Supervisors') }}
                 </flux:navlist.item>
             </flux:navlist.group>
         </flux:navlist>
@@ -89,7 +92,7 @@
         </flux:dropdown>
     </flux:sidebar>
 
-    <main class="lg:ps-72">
+    <main class="lg:ps-72 lg:h-screen">
         <!-- Mobile Header -->
         <flux:header class="lg:hidden border-b border-zinc-200 bg-zinc-50 dark:border-zinc-700 dark:bg-zinc-900">
             <flux:sidebar.toggle class="lg:hidden" icon="bars-2" inset="left" />
@@ -97,7 +100,7 @@
             <flux:dropdown position="top" align="end">
                 <flux:profile :initials="auth()->user()->initials()" icon-trailing="chevron-down" />
                 <flux:menu>
-                     <flux:menu.radio.group>
+                    <flux:menu.radio.group>
                         {{-- User info --}}
                     </flux:menu.radio.group>
                     <flux:menu.separator />
@@ -110,7 +113,8 @@
                     <flux:menu.radio.group>
                         <form method="POST" action="{{ route('logout') }}" class="w-full">
                             @csrf
-                            <flux:menu.item as="button" type="submit" icon="arrow-right-start-on-rectangle" class="w-full">
+                            <flux:menu.item as="button" type="submit" icon="arrow-right-start-on-rectangle"
+                                class="w-full">
                                 {{ __('Log Out') }}
                             </flux:menu.item>
                         </form>
@@ -120,11 +124,12 @@
         </flux:header>
 
         <!-- Page Content -->
-        <div class="p-4 sm:p-6 lg:p-8">
+        <div class="p-4 sm:p-6 lg:p-8 lg:translate-y-[-100vh] lg:h-screen lg:overflow-y-auto">
             {{ $slot }}
         </div>
     </main>
 
     @fluxScripts
 </body>
+
 </html>

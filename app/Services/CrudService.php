@@ -18,7 +18,7 @@ class CrudService
     protected function getModel(): Model
     {
         if (!$this->model) {
-            throw new Exception("Model belum di-set. Jalankan setModel() terlebih dahulu.");
+            throw new \Exception("Model belum di-set. Jalankan setModel() terlebih dahulu.");
         }
         return $this->model;
     }
