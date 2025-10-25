@@ -15,11 +15,6 @@ new #[Layout('components.layouts.lecturer')] class extends Component {
         $this->resetPage();
     }
 
-    /**
-     * Get the lecturers to display.
-     *
-     * @return \Illuminate\Contracts\Pagination\LengthAwarePaginator
-     */
     public function with(): array
     {
         return [

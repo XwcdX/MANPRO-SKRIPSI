@@ -5,12 +5,14 @@ use Livewire\Volt\Component;
 use Spatie\Permission\Models\Role;
 use App\Services\RolePermissionService;
 
-new #[Layout('components.layouts.lecturer')] class extends Component {
+new #[Layout('components.layouts.lecturer')] 
+class extends Component {
     public $roles;
     public $allPermissions;
     public ?Role $selectedRole = null;
     public array $rolePermissions = [];
     public string $newRoleName = '';
+    public bool $showCreateModal = false;
 
     protected RolePermissionService $rolePermissionService;
 
@@ -39,14 +41,21 @@ new #[Layout('components.layouts.lecturer')] class extends Component {
         }
     }
 
+    public function openCreateModal(): void
+    {
+        $this->newRoleName = '';
+        $this->resetErrorBag();
+        $this->showCreateModal = true;
+    }
+
     public function createNewRole(): void
     {
         $this->validate(['newRoleName' => 'required|string|min:3|unique:roles,name']);
         $this->rolePermissionService->createRole(['name' => $this->newRoleName]);
         
         $this->newRoleName = '';
+        $this->showCreateModal = false;
         $this->mount();
-        $this->dispatch('close-modal');
         session()->flash('success', 'New role created successfully.');
     }
 }; ?>
@@ -54,33 +63,38 @@ new #[Layout('components.layouts.lecturer')] class extends Component {
 <div class="h-full">
     <section class="w-full h-full">
         <div class="lg:grid lg:grid-cols-3 w-full lg:h-[calc(100vh-4rem)] rounded-lg shadow-xl border border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-900">
-            {{-- Left Panel: List of Roles --}}
             <div class="lg:col-span-1 border-r border-zinc-200 dark:border-zinc-700 p-4 lg:h-full overflow-y-auto">
                 <div class="flex justify-between items-center mb-4">
                     <h1 class="text-2xl text-black dark:text-white font-bold">Roles</h1>
-                    {{-- A wire:click event would open a modal to create a new role --}}
-                    <button wire:click="createNewRole" type="button"
-                        class="bg-blue-600 text-white px-3 py-2 rounded-lg hover:bg-blue-700 text-sm">
-                        New Role
+                    <button 
+                        wire:click="openCreateModal" 
+                        type="button"
+                        class="inline-flex items-center px-3 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 cursor-pointer transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                        wire:loading.attr="disabled"
+                        wire:target="openCreateModal">
+                        <span wire:loading.remove wire:target="openCreateModal">New Role</span>
+                        <span wire:loading wire:target="openCreateModal">Loading...</span>
                     </button>
                 </div>
                 <hr class="border-zinc-200 dark:border-zinc-700 mb-4">
 
                 <div class="flex flex-col gap-2">
                     @foreach ($roles as $role)
-                        {{-- When a role is clicked, the $selectedRole in the component is updated --}}
-                        <button wire:click="selectRole({{ $role->id }})"
+                        <button 
+                            wire:click="selectRole({{ $role->id }})"
                             class="w-full text-start rounded-lg p-3 cursor-pointer transition-all duration-200
                                 {{ optional($selectedRole)->id == $role->id 
                                     ? 'bg-blue-100 dark:bg-blue-900 font-semibold text-blue-900 dark:text-blue-100' 
-                                    : 'bg-zinc-100 dark:bg-zinc-800 hover:bg-zinc-200 dark:hover:bg-zinc-700 text-zinc-900 dark:text-zinc-100' }}">
-                            {{ $role->name }}
+                                    : 'bg-zinc-100 dark:bg-zinc-800 hover:bg-zinc-200 dark:hover:bg-zinc-700 text-zinc-900 dark:text-zinc-100' }}"
+                            wire:loading.attr="disabled"
+                            wire:target="selectRole({{ $role->id }})">
+                            <span wire:loading.remove wire:target="selectRole({{ $role->id }})">{{ $role->name }}</span>
+                            <span wire:loading wire:target="selectRole({{ $role->id }})">Loading...</span>
                         </button>
                     @endforeach
                 </div>
             </div>
 
-            {{-- Right Panel: Edit Selected Role --}}
             <div class="lg:col-span-2 p-4 h-full overflow-y-auto">
                 @if ($selectedRole)
                     <div>
@@ -88,9 +102,14 @@ new #[Layout('components.layouts.lecturer')] class extends Component {
                             <h1 class="text-2xl text-black dark:text-white font-bold">
                                 Edit Role: {{ $selectedRole->name }}
                             </h1>
-                            <button wire:click="savePermissions" type="button"
-                                class="bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700 text-sm">
-                                Save Changes
+                            <button 
+                                wire:click="savePermissions" 
+                                type="button"
+                                class="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-green-600 hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500 cursor-pointer transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                                wire:loading.attr="disabled"
+                                wire:target="savePermissions">
+                                <span wire:loading.remove wire:target="savePermissions">Save Changes</span>
+                                <span wire:loading wire:target="savePermissions">Saving...</span>
                             </button>
                         </div>
 
@@ -108,9 +127,11 @@ new #[Layout('components.layouts.lecturer')] class extends Component {
                                 @foreach ($allPermissions as $permission)
                                     <label
                                         class="flex items-center p-3 rounded-lg bg-zinc-50 dark:bg-zinc-800 hover:bg-zinc-100 dark:hover:bg-zinc-700 border border-zinc-200 dark:border-zinc-700 cursor-pointer transition-colors">
-                                        <input type="checkbox" wire:model.live="rolePermissions"
+                                        <input 
+                                            type="checkbox" 
+                                            wire:model.live="rolePermissions"
                                             value="{{ $permission->name }}"
-                                            class="h-4 w-4 rounded border-zinc-300 dark:border-zinc-600 text-blue-600 focus:ring-blue-500">
+                                            class="h-4 w-4 rounded border-zinc-300 dark:border-zinc-600 text-blue-600 focus:ring-blue-500 cursor-pointer">
                                         <span class="ml-3 text-sm text-zinc-700 dark:text-zinc-300">{{ $permission->name }}</span>
                                     </label>
                                 @endforeach
@@ -125,4 +146,42 @@ new #[Layout('components.layouts.lecturer')] class extends Component {
             </div>
         </div>
     </section>
+
+    @if ($showCreateModal)
+        <div class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50" wire:loading.class="opacity-50" wire:target="createNewRole">
+            <div class="bg-white dark:bg-zinc-800 rounded-lg shadow-xl p-8 w-full max-w-md" @click.away="$wire.set('showCreateModal', false)">
+                <h2 class="text-2xl font-bold text-zinc-800 dark:text-zinc-200 mb-6">Create New Role</h2>
+                <form wire:submit.prevent="createNewRole">
+                    <div class="space-y-4">
+                        <div>
+                            <label for="newRoleName" class="block text-sm font-medium text-zinc-700 dark:text-zinc-300">Role Name</label>
+                            <input 
+                                type="text" 
+                                wire:model="newRoleName" 
+                                id="newRoleName" 
+                                placeholder="Enter role name"
+                                class="mt-1 block w-full rounded-md border-zinc-300 dark:border-zinc-600 dark:bg-zinc-700 dark:text-white shadow-sm focus:border-indigo-500 focus:ring-indigo-500">
+                            @error('newRoleName') <span class="text-red-500 text-xs">{{ $message }}</span> @enderror
+                        </div>
+                    </div>
+                    <div class="mt-6 flex justify-end gap-4">
+                        <button 
+                            type="button" 
+                            wire:click="$set('showCreateModal', false)" 
+                            class="px-4 py-2 bg-zinc-200 dark:bg-zinc-600 text-zinc-800 dark:text-zinc-200 rounded-md hover:bg-zinc-300 dark:hover:bg-zinc-500 cursor-pointer transition-colors">
+                            Cancel
+                        </button>
+                        <button 
+                            type="submit" 
+                            class="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer transition-colors"
+                            wire:loading.attr="disabled"
+                            wire:target="createNewRole">
+                            <span wire:loading.remove wire:target="createNewRole">Create Role</span>
+                            <span wire:loading wire:target="createNewRole">Creating...</span>
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    @endif
 </div>

@@ -74,8 +74,10 @@ Route::prefix('lecturer')->name('lecturer.')->middleware(['auth:lecturer', 'veri
         Volt::route('roles/create', 'lecturer.roles.create')->name('roles.create');
         Volt::route('roles/{role}/edit', 'lecturer.roles.edit')->name('roles.edit');
 
-        Volt::route('lecturers/roles', 'lecturer.assignments.index')->name('assignments.index');
-        Volt::route('lecturers/{lecturer}/roles', 'lecturer.assignments.edit')->name('assignments.edit');
+        Volt::route('management', 'lecturer.lecturers.index')->name('lecturers.index');
+
+        Volt::route('roles/management', 'lecturer.assignments.index')->name('assignments.index');
+        Volt::route('{lecturer}/roles', 'lecturer.assignments.edit')->name('assignments.edit');
     });
 
     Volt::route('profile', 'lecturer.profile')->name('profile');
