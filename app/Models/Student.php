@@ -22,6 +22,7 @@ class Student extends Authenticatable implements MustVerifyEmail
         'email',
         'password',
         'thesis_title',
+        'thesis_description',
         'status',
         'head_division_comment',
         'revision_notes',
@@ -88,15 +89,14 @@ class Student extends Authenticatable implements MustVerifyEmail
     public function getStatusTextAttribute()
     {
         $statuses = [
-            0 => 'New Student',
-            1 => 'Thesis Title Submitted',
-            2 => 'Thesis Title Declined',
-            3 => 'Title Accepted & Forwarded',
-            4 => 'Waiting for Schedule',
-            5 => 'Scheduled',
-            6 => 'Thesis Declined',
-            7 => 'Thesis Accepted & Waiting Final',
-            8 => 'Completed'
+            0 => 'Submit Title',
+            1 => 'Choose Supervisor',
+            2 => 'Upload Proposal',
+            3 => 'Proposal Presentation',
+            4 => 'Proposal Final',
+            5 => 'Upload Thesis',
+            6 => 'Thesis Presentation',
+            7 => 'Thesis Final',
         ];
 
         return $statuses[$this->status] ?? 'Unknown';

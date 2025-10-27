@@ -1,135 +1,71 @@
-<!DOCTYPE html>
-<html lang="{{ str_replace('_', '-', app()->getLocale()) }}" class="dark">
+@php
+    use Illuminate\Support\Facades\Auth;
 
-<head>
-    @include('partials.head')
-</head>
+    $user = Auth::guard('student')->user() ?? Auth::guard('lecturer')->user();
+@endphp
 
-<body class="min-h-screen bg-white dark:bg-zinc-800 lg:overflow-hidden">
-    <flux:sidebar sticky stashable
-        class="border-e border-zinc-200 bg-zinc-50 dark:border-zinc-700 dark:bg-zinc-900 min-h-screen">
-        <flux:sidebar.toggle class="lg:hidden" icon="x-mark" />
+<div class="flex h-screen">
+    <aside 
+        id="sidebar" 
+        class="fixed inset-y-0 left-0 w-64 bg-gray-800 bg-opacity-80 text-white flex flex-col transform -translate-x-full lg:translate-x-0 transition-transform duration-300 z-50"
+    >
+        <div class="p-6 text-2xl font-semibold border-b border-gray-700">PETRA</div>
+        <nav class="flex-1 px-4 py-6 space-y-2">
+            <a href="/" class="flex items-center px-4 py-2.5 hover:bg-gray-700 rounded-lg font-medium">Dashboard</a>
+            <a href="/" class="flex items-center px-4 py-2.5 hover:bg-gray-700 rounded-lg">Topik Dosen</a>
+            <a href="/" class="flex items-center px-4 py-2.5 hover:bg-gray-700 rounded-lg">Sidang Proposal</a>
+            <a href="/" class="flex items-center px-4 py-2.5 hover:bg-gray-700 rounded-lg">Sidang Skripsi</a>
+        </nav>
+        <div class="px-4 py-6 border-t border-gray-700">
+            <a href="/logout" class="flex items-center px-4 py-2.5 text-gray-300 hover:bg-gray-700 rounded-lg">Log out</a>
+        </div>
+    </aside>
 
-        <a href="{{ route('student.dashboard') }}" class="me-5 flex items-center space-x-2 rtl:space-x-reverse"
-            wire:navigate>
-            <x-app-logo />
-        </a>
+    <div id="blurOverlay" class="fixed inset-0 bg-transparent backdrop-blur-sm hidden z-40 lg:hidden"></div>
 
-        {{-- STUDENT-SPECIFIC NAVIGATION --}}
-        <flux:navlist variant="outline">
-            <flux:navlist.group :heading="__('Platform')" class="grid">
-                <flux:navlist.item icon="home" :href="route('student.dashboard')"
-                    :current="request()->routeIs('student.dashboard')" wire:navigate>{{ __('Dashboard') }}
-                </flux:navlist.item>
-            </flux:navlist.group>
+    <main id="mainContent" class="flex-1 flex flex-col ml-0 lg:ml-64 transition-all duration-300 min-w-0">
+        <header class="flex items-center justify-between p-5 bg-white bg-opacity-70 backdrop-blur-sm">
+            <div class="flex items-center space-x-4">
+                <button id="hamburger" class="text-gray-600 lg:hidden">
+                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"
+                        xmlns="http://www.w3.org/2000/svg">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                            d="M4 6h16M4 12h16m-7 6h7"></path>
+                    </svg>
+                </button>
+                <h1 class="text-xl font-semibold text-gray-800">Pendaftaran & Penjadwalan Proposal Skripsi</h1>
+            </div>
+            <div class="text-md font-medium text-gray-700">Hello, {{ $user->name ?? 'Unknown User' }}</div>
+        </header>
 
-            <flux:navlist.group :heading="__('Thesis')" class="grid">
-                <flux:navlist.item icon="document-plus" :href="route('student.thesis.submit-title')"
-                    :current="request()->routeIs('student.thesis.submit-title')" wire:navigate>{{ __('Submit Title') }}
-                </flux:navlist.item>
-                <flux:navlist.item icon="document-magnifying-glass" :href="route('student.thesis.status')"
-                    :current="request()->routeIs('student.thesis.status')" wire:navigate>{{ __('Thesis Status') }}
-                </flux:navlist.item>
-            </flux:navlist.group>
-
-            <flux:navlist.group :heading="__('Guidance')" class="grid">
-                <flux:navlist.item icon="users" :href="route('student.supervisors.select')"
-                    :current="request()->routeIs('student.supervisors.select')" wire:navigate>
-                    {{ __('Select Supervisors') }}
-                </flux:navlist.item>
-                <flux:navlist.item icon="user-group" :href="route('student.supervisors.current')"
-                    :current="request()->routeIs('student.supervisors.current')" wire:navigate>
-                    {{ __('My Supervisors') }}
-                </flux:navlist.item>
-            </flux:navlist.group>
-        </flux:navlist>
-
-        <flux:spacer />
-
-        <!-- Desktop User Menu -->
-        <flux:dropdown class="hidden lg:block" position="bottom" align="start">
-            <flux:profile :name="auth()->user()->name" :initials="auth()->user()->initials()"
-                icon:trailing="chevron-up-down" />
-
-            <flux:menu class="w-[220px]">
-                <flux:menu.radio.group>
-                    <div class="p-0 text-sm font-normal">
-                        <div class="flex items-center gap-2 px-1 py-1.5 text-start text-sm">
-                            <span class="relative flex h-8 w-8 shrink-0 overflow-hidden rounded-lg">
-                                <span
-                                    class="flex h-full w-full items-center justify-center rounded-lg bg-neutral-200 text-black dark:bg-neutral-700 dark:text-white">
-                                    {{ auth()->user()->initials() }}
-                                </span>
-                            </span>
-                            <div class="grid flex-1 text-start text-sm leading-tight">
-                                <span class="truncate font-semibold">{{ auth()->user()->name }}</span>
-                                <span class="truncate text-xs">{{ auth()->user()->email }}</span>
-                            </div>
-                        </div>
-                    </div>
-                </flux:menu.radio.group>
-
-                <flux:menu.separator />
-
-                <flux:menu.radio.group>
-                    <flux:menu.item :href="route('student.profile')" icon="cog" wire:navigate>
-                        {{ __('Profile') }}
-                    </flux:menu.item>
-                </flux:menu.radio.group>
-
-                <flux:menu.separator />
-
-                <flux:menu.radio.group>
-                    <form method="POST" action="{{ route('logout') }}" class="w-full">
-                        @csrf
-                        <flux:menu.item as="button" type="submit" icon="arrow-right-start-on-rectangle"
-                            class="w-full">
-                            {{ __('Log Out') }}
-                        </flux:menu.item>
-                    </form>
-                </flux:menu.radio.group>
-            </flux:menu>
-        </flux:dropdown>
-    </flux:sidebar>
-
-    <main class="lg:ps-72 lg:h-screen">
-        <!-- Mobile Header -->
-        <flux:header class="lg:hidden border-b border-zinc-200 bg-zinc-50 dark:border-zinc-700 dark:bg-zinc-900">
-            <flux:sidebar.toggle class="lg:hidden" icon="bars-2" inset="left" />
-            <flux:spacer />
-            <flux:dropdown position="top" align="end">
-                <flux:profile :initials="auth()->user()->initials()" icon-trailing="chevron-down" />
-                <flux:menu>
-                    <flux:menu.radio.group>
-                        {{-- User info --}}
-                    </flux:menu.radio.group>
-                    <flux:menu.separator />
-                    <flux:menu.radio.group>
-                        <flux:menu.item :href="route('student.profile')" icon="cog" wire:navigate>
-                            {{ __('Profile') }}
-                        </flux:menu.item>
-                    </flux:menu.radio.group>
-                    <flux:menu.separator />
-                    <flux:menu.radio.group>
-                        <form method="POST" action="{{ route('logout') }}" class="w-full">
-                            @csrf
-                            <flux:menu.item as="button" type="submit" icon="arrow-right-start-on-rectangle"
-                                class="w-full">
-                                {{ __('Log Out') }}
-                            </flux:menu.item>
-                        </form>
-                    </flux:menu.radio.group>
-                </flux:menu>
-            </flux:dropdown>
-        </flux:header>
-
-        <!-- Page Content -->
-        <div class="p-4 sm:p-6 lg:p-8 lg:translate-y-[-100vh] lg:h-screen lg:overflow-y-auto">
+        <div class="flex-1 p-8 overflow-y-auto min-w-0">
             {{ $slot }}
         </div>
     </main>
+</div>
 
-    @fluxScripts
-</body>
+<script>
+    const sidebar = document.getElementById('sidebar');
+    const hamburger = document.getElementById('hamburger');
+    const blurOverlay = document.getElementById('blurOverlay');
 
-</html>
+    function openSidebar() {
+        sidebar.classList.remove('-translate-x-full');
+        blurOverlay.classList.remove('hidden');
+    }
+
+    function closeSidebar() {
+        sidebar.classList.add('-translate-x-full');
+        blurOverlay.classList.add('hidden');
+    }
+
+    hamburger.addEventListener('click', () => {
+        if (sidebar.classList.contains('-translate-x-full')) {
+            openSidebar();
+        } else {
+            closeSidebar();
+        }
+    });
+
+    blurOverlay.addEventListener('click', closeSidebar);
+</script>

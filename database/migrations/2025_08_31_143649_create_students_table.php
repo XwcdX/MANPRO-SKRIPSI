@@ -18,7 +18,8 @@ return new class extends Migration {
             $table->timestamp('email_verified_at')->nullable();
             $table->rememberToken();
             $table->string('thesis_title')->nullable();
-            $table->tinyInteger('status')->default(0)->comment(' 0=New, 1=Title Submitted, 2=Title Declined, 3=Title Accepted & Forwarded, 4=Waiting Schedule, 5=Scheduled, 6=Thesis Declined, 7=Thesis Accepted & Waiting Final, 8=Completed');
+            $table->text('thesis_description')->nullable();
+            $table->tinyInteger('status')->default(0)->comment(' 0=Submit Title, 1=Choose Supervisor, 2=Upload Proposal, 3=Proposal Presentation, 4=Proposal Final, 5=Upload Thesis, 6=Thesis Presentation, 7=Thesis Final');
             $table->text('head_division_comment')->nullable();
             $table->text('revision_notes')->nullable();
             $table->string('final_thesis_path', 500)->nullable();

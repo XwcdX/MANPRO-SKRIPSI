@@ -38,11 +38,13 @@ class SubmissionService
      * @param string $studentNrp Student's Id or User Id
      * @param string $title Thesis title
      */
-    public function submitTitle(string $studentId, string $title)
+    public function submitTitle(string $studentId, string $title, string $description)
     {
         if($this->isTitleValid($title)){
             $this->crud->setModel(new Student())->update($studentId, [
+                'status' => 1,
                 'thesis_title' => $title,
+                'thesis_description' => $description,
             ]);
             return true;
         }
@@ -57,6 +59,7 @@ class SubmissionService
      */
     private function isTitleValid(string $title)
     {
+        return True;
         //Logika check disini, returnya boolean
     }
 

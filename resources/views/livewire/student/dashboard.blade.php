@@ -13,117 +13,182 @@ new class extends Component {
     public function mount()
     {
         $this->studentStatus = $this->user->status;
-
-        $this->steps = [
-            [
-                'name' => 'Submit Title',
-                'description' => 'Submit your thesis title for review.',
-                'status_unlocked' => 0,
-                'status_active' => [1],
-            ],
-            [
-                'name' => 'Title Approved',
-                'description' => 'Your title has been approved by the department.',
-                'status_unlocked' => 3,
-                'status_active' => [3, 4],
-            ],
-            [
-                'name' => 'Presentation Scheduled',
-                'description' => 'Your presentation schedule is set.',
-                'status_unlocked' => 5,
-                'status_active' => [5],
-            ],
-            [
-                'name' => 'Thesis Accepted',
-                'description' => 'Congratulations! Your thesis has been accepted.',
-                'status_unlocked' => 7,
-                'status_active' => [7],
-            ],
-            [
-                'name' => 'Completed',
-                'description' => 'You have completed all requirements.',
-                'status_unlocked' => 8,
-                'status_active' => [8],
-            ],
-        ];
     }
 }; ?>
 
-<div> {{-- Add a single root div --}}
-    <div class="py-12">
-        <div class="max-w-7xl mx-auto sm:px-6 lg:px-8">
-            <div class="bg-white dark:bg-gray-800 overflow-hidden shadow-sm sm:rounded-lg">
-                <div class="p-6 text-gray-900 dark:text-gray-100">
-                    <h3 class="text-lg font-medium">Welcome, {{ $user->name }}!</h3>
-                    <p class="mt-1 text-sm text-gray-600 dark:text-gray-400">
-                        Here is your current thesis progress. Your status is:
-                        <strong>{{ $user->status_text ?? 'N/A' }}</strong> {{-- Added a fallback for status_text --}}
-                    </p>
+    <style>
+        /* HACK: PENGONTROL DISPLAY MURNI CSS (Biarkan tetap ada) */
+        @media (max-width: 767px) {
+            #desktop-content-container {
+                display: none !important;
+            }
+            #mobile-accordion-container {
+                display: block !important;
+            }
+        }
+    </style>
 
-                    <div class="mt-8">
-                        <nav aria-label="Progress">
-                            <ol role="list" class="flex items-center">
-                                @foreach ($steps as $stepIdx => $step)
-                                    @php
-                                        $isCompleted = $studentStatus >= $step['status_unlocked'];
-                                        $isCurrent = in_array($studentStatus, $step['status_active']);
-                                    @endphp
-                                    <li class="relative {{ !$loop->last ? 'pr-8 sm:pr-20' : '' }}">
-                                        @if ($isCompleted)
-                                            <div class="absolute inset-0 flex items-center" aria-hidden="true">
-                                                @if (!$loop->last)
-                                                    <div class="h-0.5 w-full bg-indigo-600"></div>
-                                                @endif
-                                            </div>
-                                            <a href="#"
-                                                class="relative flex h-8 w-8 items-center justify-center rounded-full bg-indigo-600 hover:bg-indigo-900">
-                                                <svg class="h-5 w-5 text-white" viewBox="0 0 20 20" fill="currentColor"
-                                                    aria-hidden="true">
-                                                    <path fill-rule="evenodd"
-                                                        d="M16.704 4.153a.75.75 0 01.143 1.052l-8 10.5a.75.75 0 01-1.127.075l-4.5-4.5a.75.75 0 011.06-1.06l3.894 3.893 7.48-9.817a.75.75 0 011.052-.143z"
-                                                        clip-rule="evenodd" />
-                                                </svg>
-                                            </a>
-                                        @elseif ($isCurrent)
-                                            {{-- Current Step --}}
-                                            <div class="absolute inset-0 flex items-center" aria-hidden="true">
-                                                @if (!$loop->last)
-                                                    <div class="h-0.5 w-full bg-gray-200 dark:bg-gray-700"></div>
-                                                @endif
-                                            </div>
-                                            <a href="#"
-                                                class="relative flex h-8 w-8 items-center justify-center rounded-full border-2 border-indigo-600 bg-white dark:bg-gray-800"
-                                                aria-current="step">
-                                                <span class="h-2.5 w-2.5 rounded-full bg-indigo-600"
-                                                    aria-hidden="true"></span>
-                                            </a>
-                                        @else
-                                            {{-- Upcoming/Locked Step --}}
-                                            <div class="absolute inset-0 flex items-center" aria-hidden="true">
-                                                @if (!$loop->last)
-                                                    <div class="h-0.5 w-full bg-gray-200 dark:bg-gray-700"></div>
-                                                @endif
-                                            </div>
-                                            <a href="#"
-                                                class="group relative flex h-8 w-8 items-center justify-center rounded-full border-2 border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 hover:border-gray-400">
-                                                {{-- Lock Icon would go here --}}
-                                                <span
-                                                    class="h-2.5 w-2.5 rounded-full bg-transparent group-hover:bg-gray-300"
-                                                    aria-hidden="true"></span>
-                                            </a>
-                                        @endif
-                                        <div class="absolute -bottom-10 w-max text-center">
-                                            <p
-                                                class="text-xs font-semibold {{ $isCompleted || $isCurrent ? 'text-indigo-600 dark:text-indigo-400' : 'text-gray-500' }}">
-                                                {{ $step['name'] }}</p>
-                                        </div>
-                                    </li>
-                                @endforeach
-                            </ol>
-                        </nav>
-                    </div>
+    <div class="bg-white bg-opacity-90 backdrop-blur-sm p-4 md:p-8 rounded-xl shadow-lg">
+
+        @php
+            // Variabel PHP untuk logic:
+            $steps = ['Judul', 'Pilih Dosbing', 'Upload Proposal', 'Sidang Proposal', 'Final Proposal', 'Upload Skripsi', 'Sidang Skripsi', 'Final Skripsi'];
+        @endphp
+
+        <div id="desktop-content-container" class="hidden md:block">
+            <div class="mb-8 sm:mb-10 overflow-x-auto">
+                <h3 class="font-medium text-gray-600 mb-4 text-sm sm:text-base">Your Progress</h3>
+                <div class="flex items-start min-w-max">
+
+                    @foreach($steps as $index => $step)
+                        <div class="flex flex-col items-center w-16 flex-shrink-0">
+
+                            @if($index < $studentStatus)
+                                <div class="w-7 h-7 bg-green-500 border-2 border-green-500 rounded-full flex items-center justify-center z-10">
+                                    <svg class="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M5 13l4 4L19 7"></path>
+                                    </svg>
+                                </div>
+                                <p class="mt-2 text-xs sm:text-sm font-medium text-gray-700 text-center">{{ $step }}</p>
+
+                            @elseif($index == $studentStatus)
+                                <div class="w-7 h-7 bg-black border-2 border-black rounded-full z-10"></div>
+                                <p class="mt-2 text-xs sm:text-sm font-medium text-gray-700 text-center">{{ $step }}</p>
+
+                            @else
+                                <div class="w-7 h-7 bg-white border-2 border-gray-300 rounded-full z-10"></div>
+                                <p class="mt-2 text-xs sm:text-sm text-gray-500 text-center">{{ $step }}</p>
+                            @endif
+
+                        </div>
+
+                        @if(!$loop->last)
+                            <div class="flex-auto border-t-2 {{ $index < $studentStatus ? 'border-green-500' : 'border-gray-300' }} mx-2 mt-3">
+                            </div>
+                        @endif
+                    @endforeach
                 </div>
             </div>
+
+            @livewire('student.submit-title', ['user' => $this->user])
+        </div> {{-- End Desktop Container --}}
+
+
+        <div class="mb-8 sm:mb-10" 
+             id="mobile-accordion-container" 
+             style="display: none;">
+            <h3 class="font-medium text-gray-600 mb-4 text-sm sm:text-base">Your Progress</h3>
+            <div id="progress-accordion">
+
+                @foreach($steps as $index => $step)
+                    <div class="border-b border-gray-200 last:border-b-0">
+                        <button type="button"
+                            class="w-full py-3 px-1 text-left font-medium text-sm focus:outline-none flex items-center justify-between
+                            {{ $index < $studentStatus ? 'text-green-600 bg-green-50 hover:bg-green-100' : ($index == $studentStatus ? 'text-black bg-gray-100 hover:bg-gray-200' : 'text-gray-500 hover:bg-gray-50') }}"
+                            data-accordion-target="#accordion-body-{{ $index }}"
+                            aria-expanded="{{ $index == $studentStatus ? 'true' : 'false' }}"
+                            aria-controls="accordion-body-{{ $index }}">
+                            
+                            <div class="flex items-center">
+                                @if($index < $studentStatus)
+                                    <svg class="w-5 h-5 mr-3 text-green-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg>
+                                @elseif($index == $studentStatus)
+                                    <div class="w-4 h-4 mr-3 border-2 border-black rounded-full flex items-center justify-center flex-shrink-0">
+                                        <div class="w-2 h-2 bg-black rounded-full"></div> 
+                                    </div>
+                                @else
+                                    <div class="w-4 h-4 mr-3 border-2 border-gray-300 rounded-full flex items-center justify-center flex-shrink-0"></div>
+                                @endif
+                                <span>{{ $step }}</span>
+                            </div>
+
+                            <svg class="w-4 h-4 transform transition-transform duration-300 **accordion-icon** {{ $index == $studentStatus ? 'rotate-180' : '' }}" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>
+                        </button>
+
+                        {{-- Body Accordion (Konten & Form Submit) --}}
+                        <div id="accordion-body-{{ $index }}" class="overflow-hidden transition-all duration-300 **accordion-content**" 
+                            style="{{ $index == $studentStatus ? 'max-height: 900px; padding: 10px;' : 'max-height: 0; padding: 0 10px;' }}">
+                            
+                            <div class="pb-3 pt-1 text-gray-600 text-sm">
+                                
+                                @if($index == $studentStatus)
+                                    {{-- kasih if per step kalau step 0 ya ini nanti kalau step 1 beda lagi, stepnya nanti berubah tiap klik tombol lingkaran --}}
+                                    @livewire('student.submit-title', ['user' => $this->user])
+                                @elseif($index < $studentStatus)
+                                    <p>Tahap **{{ $step }}** telah diselesaikan.</p>
+                                @else
+                                    <p>Menunggu tahap **{{ $steps[$studentStatus] }}** selesai.</p>
+                                @endif
+                                
+                            </div>
+                        </div>
+                    </div>
+                @endforeach
+            </div>
         </div>
+        
     </div>
-</div>
+
+<script>
+    document.addEventListener('DOMContentLoaded', function () {
+        const accordionContainer = document.getElementById('mobile-accordion-container');
+        const desktopContainer = document.getElementById('desktop-content-container');
+        const desktopBreakpoint = 768; 
+
+        function toggleDisplayBasedOnWidth() {
+            if (window.innerWidth >= desktopBreakpoint) {
+                if (desktopContainer) {
+                    desktopContainer.style.display = 'block';
+                }
+                if (accordionContainer) {
+                    accordionContainer.style.display = 'none';
+                }
+            } else {
+                if (desktopContainer) {
+                    desktopContainer.style.display = 'none';
+                }
+                if (accordionContainer) {
+                    accordionContainer.style.display = 'block';
+                }
+            }
+        }
+
+        toggleDisplayBasedOnWidth();
+        window.addEventListener('resize', toggleDisplayBasedOnWidth);
+
+        const accordionButtons = document.querySelectorAll('[data-accordion-target]');
+        
+        accordionButtons.forEach(button => {
+            button.addEventListener('click', handleAccordionClick);
+        });
+        
+        function handleAccordionClick() {
+            const button = this; 
+            const targetId = button.getAttribute('data-accordion-target');
+            const targetElement = document.querySelector(targetId);
+            const isExpanded = button.getAttribute('aria-expanded') === 'true' || false;
+            const icon = button.querySelector('.accordion-icon');
+
+            document.querySelectorAll('.accordion-content').forEach(content => {
+                if (content !== targetElement) {
+                    content.style.maxHeight = '0';
+                    content.style.padding = '0 10px';
+                    document.querySelector(`[data-accordion-target="#${content.id}"]`).setAttribute('aria-expanded', 'false');
+                    document.querySelector(`[data-accordion-target="#${content.id}"] .accordion-icon`).classList.remove('rotate-180');
+                }
+            });
+
+            if (isExpanded) {
+                targetElement.style.maxHeight = '0';
+                targetElement.style.padding = '0 10px';
+                button.setAttribute('aria-expanded', 'false');
+                icon.classList.remove('rotate-180');
+            } else {
+                targetElement.style.maxHeight = targetElement.scrollHeight + 1000 + 'px'; 
+                targetElement.style.padding = '10px';
+                button.setAttribute('aria-expanded', 'true');
+                icon.classList.add('rotate-180');
+            }
+        }
+    });
+</script>
