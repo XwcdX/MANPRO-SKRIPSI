@@ -35,4 +35,9 @@ class SupervisionApplication extends Model
     {
         return $this->belongsTo(Lecturer::class);
     }
+
+    public function period()
+    {
+        return $this->belongsTo(Period::class);
+    }
 }
