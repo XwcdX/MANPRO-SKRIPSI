@@ -51,6 +51,9 @@
                     <flux:navlist.item icon="user-group" :href="route('lecturer.lecturers.index')"
                         :current="request()->routeIs('lecturer.lecturers.*')" wire:navigate>{{ __('Manage Lecturers') }}
                     </flux:navlist.item>
+                    <flux:navlist.item icon="calendar-days" :href="route('lecturer.periods.index')"
+                        :current="request()->routeIs('lecturer.periods.*')" wire:navigate>{{ __('Manage Periods') }}
+                    </flux:navlist.item>
                 </flux:navlist.group>
             @endcan
 
