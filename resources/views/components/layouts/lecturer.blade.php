@@ -48,12 +48,8 @@
                     <flux:navlist.item icon="user-circle" :href="route('lecturer.assignments.index')"
                         :current="request()->routeIs('lecturer.assignments.*')" wire:navigate>{{ __('Assign Roles') }}
                     </flux:navlist.item>
-                    <flux:navlist.item :href="route('lecturer.lecturers.index')"
-                        :current="request()->routeIs('lecturer.lecturers.*')" wire:navigate>
-                        <x-slot:icon>
-                            <x-gmdi-manage-accounts-o class="h-5 w-5" />
-                        </x-slot:icon>
-                        {{ __('Manage Lecturers') }}
+                    <flux:navlist.item icon="user-group" :href="route('lecturer.lecturers.index')"
+                        :current="request()->routeIs('lecturer.lecturers.*')" wire:navigate>{{ __('Manage Lecturers') }}
                     </flux:navlist.item>
                 </flux:navlist.group>
             @endcan
