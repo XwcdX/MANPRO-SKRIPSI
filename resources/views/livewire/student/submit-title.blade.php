@@ -36,6 +36,7 @@ new class extends Component {
         if ($success) {
             $this->message = 'Judul berhasil disubmit ✅';
             $this->status = 1;
+            $this->dispatch('student-status-updated', status: 1);
         } else {
             $this->message = 'Judul tidak valid atau sudah dipakai ⚠️';
         }

@@ -3,6 +3,7 @@
 use App\Traits\WithAuthUser;
 use Livewire\Volt\Component;
 use Livewire\Attributes\Layout;
+use Livewire\Attributes\On; 
 
 new class extends Component {
     use WithAuthUser;
@@ -14,22 +15,22 @@ new class extends Component {
     {
         $this->studentStatus = $this->user->status;
     }
+
+    #[On('student-status-updated')]
+    public function updateStudentStatus($status)
+    {
+        $this->studentStatus = $status;
+        \Log::info('🔔 Event diterima di komponen dashboard', [
+            'ssstatus' => $this->studentStatus,
+        ]);
+
+        $this->dispatch('$refresh');
+    }
 }; ?>
 
-    <style>
-        /* HACK: PENGONTROL DISPLAY MURNI CSS (Biarkan tetap ada) */
-        @media (max-width: 767px) {
-            #desktop-content-container {
-                display: none !important;
-            }
-            #mobile-accordion-container {
-                display: block !important;
-            }
-        }
-    </style>
+    
 
-    <div class="bg-white bg-opacity-90 backdrop-blur-sm p-4 md:p-8 rounded-xl shadow-lg">
-
+    <div class="bg-white bg-opacity-90 backdrop-blur-sm p-4 md:p-8 rounded-xl shadow-lg text-black">
         @php
             // Variabel PHP untuk logic:
             $steps = ['Judul', 'Pilih Dosbing', 'Upload Proposal', 'Sidang Proposal', 'Final Proposal', 'Upload Skripsi', 'Sidang Skripsi', 'Final Skripsi'];
@@ -41,7 +42,7 @@ new class extends Component {
                 <div class="flex items-start min-w-max">
 
                     @foreach($steps as $index => $step)
-                        <div class="flex flex-col items-center w-16 flex-shrink-0">
+                        <div class="flex flex-col items-center w-16 flex-shrink-0" wire:key="step-{{ $index }}-{{ $studentStatus }}">
 
                             @if($index < $studentStatus)
                                 <div class="w-7 h-7 bg-green-500 border-2 border-green-500 rounded-full flex items-center justify-center z-10">
