@@ -103,11 +103,11 @@ new class extends Component {
                                 <span>{{ $step }}</span>
                             </div>
 
-                            <svg class="w-4 h-4 transform transition-transform duration-300 **accordion-icon** {{ $index == $studentStatus ? 'rotate-180' : '' }}" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>
+                            <svg class="w-4 h-4 transform transition-transform duration-300 accordion-icon {{ $index == $studentStatus ? 'rotate-180' : '' }}" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>
                         </button>
 
                         {{-- Body Accordion (Konten & Form Submit) --}}
-                        <div id="accordion-body-{{ $index }}" class="overflow-hidden transition-all duration-300 **accordion-content**" 
+                        <div id="accordion-body-{{ $index }}" class="overflow-hidden transition-all duration-300 accordion-content" 
                             style="{{ $index == $studentStatus ? 'max-height: 900px; padding: 10px;' : 'max-height: 0; padding: 0 10px;' }}">
                             
                             <div class="pb-3 pt-1 text-gray-600 text-sm">
