@@ -38,18 +38,51 @@ class SubmissionService
      * @param string $studentNrp Student's Id or User Id
      * @param string $title Thesis title
      */
-    public function submitTitle(string $studentId, string $title, string $description)
+    public function submitTitle(string $studentId, string $title, string $description): bool
     {
-        if($this->isTitleValid($title)){
-            $this->crud->setModel(new Student())->update($studentId, [
-                'status' => 1,
-                'thesis_title' => $title,
-                'thesis_description' => $description,
-            ]);
-            return true;
-        }
+        try {
+            // Pastikan data tidak kosong
+            if (trim($title) === '' || trim($description) === '') {
+                \Log::warning("Submit title gagal: judul atau deskripsi kosong", [
+                    'student_id' => $studentId,
+                ]);
+                return false;
+            }
 
-        return false;
+            // Validasi khusus judul (misalnya sudah dipakai atau tidak)
+            if (! $this->isTitleValid($title)) {
+                \Log::info("Judul tidak valid atau sudah digunakan", [
+                    'student_id' => $studentId,
+                    'title' => $title,
+                ]);
+                return false;
+            }
+
+            // Update data mahasiswa
+            $this->crud
+                ->setModel(new Student())
+                ->update($studentId, [
+                    'status' => 1,
+                    'thesis_title' => $title,
+                    'thesis_description' => $description,
+                ]);
+
+            \Log::info("✅ Judul berhasil disubmit", [
+                'student_id' => $studentId,
+                'title' => $title,
+            ]);
+
+            return true;
+
+        } catch (\Throwable $e) {
+            \Log::error("Error saat submit title: {$e->getMessage()}", [
+                'student_id' => $studentId,
+                'title' => $title,
+                'trace' => $e->getTraceAsString(),
+            ]);
+
+            return false;
+        }
     }
 
     /**
@@ -67,32 +100,44 @@ class SubmissionService
      * Logic for assign supervisor
      * 
      * @param string $studentId
-     * @param string $supervisor1Id
-     * @param string $supervisor2Id
-     * @param string $notes
+     * @param string $supervisorId
+     * @param int $role
      */
-    public function assignSupervisor(string $studentId, string $supervisor1Id, string $supervisor2Id, string $notes)
+    public function assignSupervisor(string $studentId, string $supervisorId, int $role): bool
     {
-        $student = $this->crud->setModel(new Student())->find($studentId);
-        $supervisor1 = null;
-        $supervisor2 = null;
+        try {
+            $student = $this->crud->setModel(new Student())->find($studentId);
+            $lecturer = $this->crud->setModel(new Lecturer())->find($supervisorId);
 
-        if($supervisor1Id){
-            $supervisor1 = $this->crud->setModel(new Lecturer())->find($supervisor1Id);
-        }
-        if($supervisor2Id){
-            $supervisor2 = $this->crud->setModel(new Lecturer())->find($supervisor2Id);
-        }
+            if (!$student || !$lecturer) {
+                throw new \Exception('Data mahasiswa atau dosen tidak ditemukan.');
+            }
 
-        $period = $this->crud->setModel(new Period())->getModel()->where('is_active', true);
+            $period = $this->crud->setModel(new Period())
+                ->getModel()
+                ->where('is_active', true)
+                ->first();
 
-        if($supervisor1){
+            if (!$period) {
+                throw new \Exception('Tidak ada periode aktif saat ini.');
+            }
+
             $this->crud->setModel(new SupervisionApplication())->create([
                 'period_id' => $period->id,
-                'lecturer_id' => $lecturerId,
-                'proposed_role' => 0,
-                'student_notes' => $notes,
+                'lecturer_id' => $lecturer->id,
+                'student_id' => $student->id,
+                'proposed_role' => $role,
+                'student_notes' => null,
             ]);
+
+            return true;
+
+        } catch (\Throwable $e) {
+            \Log::error('Gagal assign supervisor: ' . $e->getMessage(), [
+                'student_id' => $studentId,
+                'supervisor_id' => $supervisorId,
+            ]);
+            return false;
         }
     }
 }

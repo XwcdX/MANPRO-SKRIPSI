@@ -16,6 +16,7 @@ class SupervisionApplication extends Model
     protected $fillable = [
         'student_id',
         'lecturer_id',
+        'period_id',
         'proposed_role',
         'student_notes',
         'lecturer_notes',

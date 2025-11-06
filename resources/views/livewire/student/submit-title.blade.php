@@ -11,7 +11,6 @@ new class extends Component {
     public string $title = '';
     public string $description = '';
     public ?int $status = null;
-    public ?string $message = null;
     public $user;
 
     public function mount($user)
@@ -26,7 +25,7 @@ new class extends Component {
     {
         // pastikan usernya ada dan guard aktif
         if (! $this->user) {
-            $this->message = 'User tidak ditemukan.';
+            $this->dispatch('notify', type: 'error', message: 'User tidak ditemukan.');
             return;
         }
 
@@ -34,11 +33,11 @@ new class extends Component {
         $success = $service->submitTitle($this->user->id, $this->title, $this->description);
 
         if ($success) {
-            $this->message = 'Judul berhasil disubmit ✅';
             $this->status = 1;
             $this->dispatch('student-status-updated', status: 1);
+            $this->dispatch('notify', type: 'success', message: 'Judul berhasil disubmit.');
         } else {
-            $this->message = 'Judul tidak valid atau sudah dipakai ⚠️';
+            $this->dispatch('notify', type: 'error', message: 'Judul tidak valid atau sudah dipakai.');
         }
     }
 };
@@ -46,7 +45,7 @@ new class extends Component {
 
 <form wire:submit.prevent="submit" class="space-y-6">
     <h5 class="text-lg font-semibold text-gray-700 mb-2">
-        {{ $status > 1 ? 'Ubah Judul Proposal' : 'Input Judul Proposal' }}
+        {{ $status > 0 ? 'Ubah Judul Proposal' : 'Input Judul Proposal' }}
     </h5>
 
     {{-- Input Judul + Search Button --}}
@@ -85,13 +84,6 @@ new class extends Component {
             placeholder="Jelaskan deskripsi singkat..."
         ></textarea>
     </div>
-
-    {{-- Pesan sukses / error --}}
-    @if($message)
-        <div class="text-sm {{ str_contains($message, 'berhasil') ? 'text-green-600' : 'text-red-600' }}">
-            {{ $message }}
-        </div>
-    @endif
 
     {{-- Tombol Submit --}}
     <div class="flex flex-col sm:flex-row sm:justify-end">

@@ -15,7 +15,7 @@ class CrudService
         return $this;
     }
 
-    protected function getModel(): Model
+    public function getModel(): Model
     {
         if (!$this->model) {
             throw new \Exception("Model belum di-set. Jalankan setModel() terlebih dahulu.");
@@ -49,5 +49,14 @@ class CrudService
     {
         $record = $this->find($id);
         return $record->delete();
+    }
+
+    public function toArray($id = null): array
+    {
+        if ($id) {
+            return $this->find($id)->toArray();
+        }
+
+        return $this->all()->toArray();
     }
 }

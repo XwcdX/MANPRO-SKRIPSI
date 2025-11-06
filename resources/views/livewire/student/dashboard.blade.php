@@ -26,6 +26,21 @@ new class extends Component {
 
         $this->dispatch('$refresh');
     }
+
+    #[On('notify')]
+    public function showSweetAlert($type, $message)
+    {
+        $this->js("
+            Swal.fire({
+                toast: true,
+                icon: '{$type}',
+                title: '{$message}',
+                position: 'top-end',
+                timer: 3000,
+                showConfirmButton: false
+            });
+        ");
+    }
 }; ?>
 
     
@@ -72,6 +87,7 @@ new class extends Component {
             </div>
 
             @livewire('student.submit-title', ['user' => $this->user])
+            {{-- @livewire('student.submit-dosbing', ['user' => $this->user]) --}}
         </div> {{-- End Desktop Container --}}
 
 
@@ -115,6 +131,7 @@ new class extends Component {
                                 @if($index == $studentStatus)
                                     {{-- kasih if per step kalau step 0 ya ini nanti kalau step 1 beda lagi, stepnya nanti berubah tiap klik tombol lingkaran --}}
                                     @livewire('student.submit-title', ['user' => $this->user])
+                                    {{-- @livewire('student.submit-dosbing', ['user' => $this->user]) --}}
                                 @elseif($index < $studentStatus)
                                     <p>Tahap **{{ $step }}** telah diselesaikan.</p>
                                 @else
