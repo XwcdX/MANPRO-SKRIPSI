@@ -52,5 +52,11 @@ class AppServiceProvider extends ServiceProvider
             }
             return route('home');
         });
+
+        if(env('APP_ENV') == 'production'){
+            Livewire::setUpdateRoute(function($handle){
+                return Route::post('/custom/livewire/update', $handle);
+            });
+        }
     }
 }
