@@ -17,7 +17,13 @@
             <a href="/" class="flex items-center px-4 py-2.5 hover:bg-gray-700 rounded-lg">Sidang Skripsi</a>
         </nav>
         <div class="px-4 py-6 border-t border-gray-700">
-            <a href="/logout" class="flex items-center px-4 py-2.5 text-gray-300 hover:bg-gray-700 rounded-lg">Log out</a>
+            <form method="POST" action="{{ route('logout') }}">
+                @csrf
+                <button type="submit"
+                    class="flex items-center w-full px-4 py-2.5 text-gray-300 hover:bg-gray-700 rounded-lg text-left">
+                    Log out
+                </button>
+            </form>
         </div>
     </aside>
 

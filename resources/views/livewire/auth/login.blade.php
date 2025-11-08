@@ -1,8 +1,6 @@
 <?php
 
 use App\Services\Auth\AuthService;
-use Illuminate\Support\Facades\Route;
-use Illuminate\Support\Facades\Session;
 use Illuminate\Validation\ValidationException;
 use Livewire\Attributes\Layout;
 use Livewire\Attributes\Validate;
@@ -22,7 +20,10 @@ new #[Layout('components.layouts.auth')] class extends Component {
 
     public function login(AuthService $authService): void
     {
+        \Log::info('masuk login');
         $this->validate();
+
+        \Log::info('Validate done');
 
         $guard = $this->role;
         $domain = $guard === 'student' ? config('domains.student') : config('domains.lecturer');
@@ -30,6 +31,7 @@ new #[Layout('components.layouts.auth')] class extends Component {
 
         $user = $authService->attemptLogin(['email' => $fullEmail, 'password' => $this->password], $guard, $this->remember);
 
+        \Log::info('Attempt login done', ['user' => $user]);
         if (!$user) {
             throw ValidationException::withMessages([
                 'nrp' => __('auth.failed'),
@@ -47,58 +49,104 @@ new #[Layout('components.layouts.auth')] class extends Component {
         ]);
         $this->redirect(route($redirectRoute), navigate: false);
     }
-}; ?>
+};
+?>
 
-<div class="flex flex-col gap-6">
-    <x-auth-header :title="__('Log in to your account')" :description="__('Enter your credentials below to log in')" />
+<div class="flex flex-col lg:flex-row min-h-screen text-black">
 
-    <form method="POST" wire:submit="login" class="flex flex-col gap-6">
-        <div>
-            <label for="nrp"
-                class="block text-sm font-medium text-gray-700 dark:text-gray-300">{{ __('NRP / Username') }}</label>
-            <div class="mt-1 flex">
-                <input id="nrp" type="text" wire:model.live="nrp" required autofocus autocomplete="nrp"
-                    placeholder="c14230001"
-                    class="w-full border rounded-lg block disabled:shadow-none dark:shadow-none appearance-none text-base sm:text-sm py-2 h-10 leading-[1.375rem] ps-3 pe-10 bg-white dark:bg-white/10 dark:disabled:bg-white/[7%] text-zinc-700 disabled:text-zinc-500 placeholder-zinc-400 disabled:placeholder-zinc-400/70 dark:text-zinc-300 dark:disabled:text-zinc-400 dark:placeholder-zinc-400 dark:disabled:placeholder-zinc-500 shadow-xs border-zinc-200 border-b-zinc-300/80 disabled:border-b-zinc-200 dark:border-white/10 dark:disabled:border-white/5">
+    <div id="login-container-mobile"
+         class="w-full lg:w-1/3 bg-white flex items-center justify-center min-h-screen p-8 lg:p-12">
 
-                <select wire:model.live="role" id="role"
-                    class="relative -ml-px block w-auto rounded-l-none rounded-r-md border-0 bg-transparent py-2.5 pl-3 pr-9 text-zinc-900 shadow-sm ring-1 ring-inset ring-zinc-300 focus:z-10 focus:ring-2 focus:ring-inset focus:ring-indigo-600 dark:text-white dark:ring-zinc-700 dark:focus:ring-indigo-500 sm:text-sm sm:leading-6">
-                    <option value="student">{{ config('domains.student') }}</option>
-                    <option value="lecturer">{{ config('domains.lecturer') }}</option>
-                </select>
-            </div>
+        <div class="w-full max-w-sm">
+            {{-- Header --}}
+            <h1 class="font-playfair text-5xl sm:text-6xl font-bold mb-2 text-gray-800">PETRA</h1>
+            <h2 class="text-xl font-medium text-gray-700 mb-8">
+                Pendaftaran & Penjadwalan Proposal Skripsi
+            </h2>
 
-            @if ($nrp)
-                <p class="mt-2 text-xs text-gray-500 dark:text-gray-400">
-                    Your full email is: <span
-                        class="font-medium text-gray-700 dark:text-gray-200">{{ $nrp }}{{ $role === 'student' ? config('domains.student') : config('domains.lecturer') }}</span>
-                </p>
-            @endif
-            @error('nrp')
-                <span class="text-sm text-red-600">{{ $message }}</span>
-            @enderror
+            {{-- Form Livewire --}}
+            <form wire:submit="login" class="flex flex-col gap-6">
+                <div>
+                    <label for="nrp" class="block text-sm font-medium text-gray-700">
+                        NRP / Username
+                    </label>
+
+                    <div class="mb-4">
+                        <input id="nrp" type="text" wire:model="nrp" required autofocus
+                            placeholder="c14230001"
+                            class="w-full px-4 py-3 bg-gray-100 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-gray-700">
+                    </div>
+
+                    <div class="mt-1 flex">
+                        <span class="inline-flex items-center px-3 text-sm text-gray-900 bg-gray-100 border border-r-0 border-gray-200 rounded-l-lg">
+                            @
+                        </span>
+                        <select wire:model="role"
+                            class="flex-1 px-4 py-3 bg-gray-100 border border-l-0 border-gray-200 rounded-r-lg focus:outline-none focus:ring-2 focus:ring-gray-700 text-sm">
+                            <option value="student">{{ config('domains.student') }}</option>
+                            <option value="lecturer">{{ config('domains.lecturer') }}</option>
+                        </select>
+                    </div>
+
+                    @if ($nrp)
+                        <p class="mt-2 text-xs text-gray-500">
+                            Your full email is:
+                            <span class="font-medium text-gray-700">
+                                {{ $nrp }}{{ $role === 'student' ? config('domains.student') : config('domains.lecturer') }}
+                            </span>
+                        </p>
+                    @endif
+
+                    @error('nrp')
+                        <span class="text-sm text-red-600">{{ $message }}</span>
+                    @enderror
+                </div>
+                <div>
+                    <label for="password" class="block text-sm font-medium text-gray-700">
+                        Password
+                    </label>
+                    <input id="password" type="password" wire:model="password" required
+                        class="w-full px-4 py-3 bg-gray-100 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-gray-700"
+                        placeholder="Password">
+
+                    @error('password')
+                        <span class="text-sm text-red-600">{{ $message }}</span>
+                    @enderror
+                </div>
+                <div class="flex flex-col gap-4">
+                    {{-- Remember & Lupa Password --}}
+                    <div class="flex items-center justify-between">
+                        <label class="flex items-center text-sm">
+                            <input type="checkbox" wire:model="remember" class="mr-2">
+                            Remember me
+                        </label>
+
+                        @if (Route::has('password.request'))
+                            <a href="{{ route('password.request') }}" class="text-sm text-gray-700 hover:text-gray-900">
+                                Forgot password?
+                            </a>
+                        @endif
+                    </div>
+
+                    {{-- Tombol Login --}}
+                    <button type="submit"
+                        class="w-full bg-gray-700 text-white font-medium py-3 px-4 rounded-lg hover:bg-gray-800 transition-colors duration-300">
+                        <span wire:loading.remove>LOG IN</span>
+                        <span wire:loading>Processing...</span>
+                    </button>
+
+                    {{-- Info tambahan --}}
+                    <p class="text-xs sm:text-sm mt-3 text-gray-600">
+                        Keterangan pengisian username: <br>
+                        - Mahasiswa : sesuai email di <strong>john.petra.ac.id</strong> <br>
+                        - Dosen : sesuai email di <strong>peter.petra.ac.id</strong>
+                    </p>
+                </div>
+            </form>
         </div>
+    </div>
 
-        <div>
-            <flux:input wire:model="password" :label="__('Password')" type="password" required
-                autocomplete="current-password" :placeholder="__('Password')" viewable />
-        </div>
-
-        <div class="flex items-center justify-between">
-            <flux:checkbox wire:model="remember" :label="__('Remember me')" />
-
-            @if (Route::has('password.request'))
-                <flux:link class="text-sm" :href="route('password.request')" wire:navigate>
-                    {{ __('Forgot your password?') }}
-                </flux:link>
-            @endif
-        </div>
-
-        <div class="flex items-center justify-end">
-            <flux:button variant="primary" type="submit" class="w-full">
-                <span wire:loading.remove>{{ __('Log in') }}</span>
-                <span wire:loading>{{ __('Processing...') }}</span>
-            </flux:button>
-        </div>
-    </form>
+    <div class="hidden lg:block lg:w-2/3 bg-cover bg-center"
+         style="background-image: url('https://images.unsplash.com/photo-1521737711867-e3b97375f902?q=80&w=2574&auto=format&fit=crop');">
+    </div>
 </div>
