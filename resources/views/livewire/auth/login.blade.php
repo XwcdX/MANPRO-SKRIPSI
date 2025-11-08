@@ -59,13 +59,13 @@ new #[Layout('components.layouts.auth')] class extends Component {
 
         <div class="w-full max-w-sm">
             {{-- Header --}}
-            <h1 class="font-playfair text-5xl sm:text-6xl font-bold mb-2 text-gray-800">PETRA</h1>
-            <h2 class="text-xl font-medium text-gray-700 mb-8">
+            <img class="pb-6" src="{{ asset('assets/logopcubiru.png') }}" alt="logopcubiru">
+            <h2 class="text-xl font-medium text-gray-700 mb-4">
                 Pendaftaran & Penjadwalan Proposal Skripsi
             </h2>
 
             {{-- Form Livewire --}}
-            <form wire:submit="login" class="flex flex-col gap-6">
+            <form wire:submit="login" class="flex flex-col gap-4">
                 <div>
                     <label for="nrp" class="block text-sm font-medium text-gray-700">
                         NRP / Username
