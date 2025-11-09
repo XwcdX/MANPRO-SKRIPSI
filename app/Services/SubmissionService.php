@@ -103,7 +103,7 @@ class SubmissionService
      * @param string $supervisorId
      * @param int $role
      */
-    public function assignSupervisor(string $studentId, string $supervisorId, int $role): bool
+    public function assignSupervisor(string $studentId, string $supervisorId, int $role, string $note): bool
     {
         try {
             $student = $this->crud->setModel(new Student())->find($studentId);
@@ -127,7 +127,7 @@ class SubmissionService
                 'lecturer_id' => $lecturer->id,
                 'student_id' => $student->id,
                 'proposed_role' => $role,
-                'student_notes' => null,
+                'student_notes' => $note,
             ]);
 
             return true;

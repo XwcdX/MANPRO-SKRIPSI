@@ -17,6 +17,9 @@ new class extends Component {
     public array $lecturers2 = [];
     public ?string $dosbing1 = null;
     public ?string $dosbing2 = null;
+    public ?string $reason1 = null;
+    public ?string $reason2 = null;
+
 
     protected $crud;
 
@@ -49,12 +52,13 @@ new class extends Component {
         }
 
         $lecturerId = $dosbing === 0 ? $this->dosbing1 : $this->dosbing2;
+        $reason = $dosbing === 0 ? $this->reason1 : $this->reason2;
 
-        // Jalankan layanan pengajuan dosen pembimbing
         $success = $service->assignSupervisor(
             studentId: $this->user->id,
             supervisorId: $lecturerId,
-            role: $dosbing
+            role: $dosbing,
+            note: $reason
         );
 
         if ($success) {
@@ -72,46 +76,61 @@ new class extends Component {
     <div class="space-y-6 max-w-xl mx-auto pt-2 md:pt-8 md:mb-20 mb-4">
 
         <!-- Dosbing 1 -->
-        <div class="flex flex-col space-y-2 sm:flex-row sm:items-center sm:space-y-0 sm:space-x-4">
-            <label for="dosbing1" class="w-28 text-sm font-medium text-gray-700">Dosbing 1</label>
+        <div class="flex flex-col space-y-3 sm:space-y-2 sm:flex-row sm:items-start sm:space-x-4">
+            <div class="flex flex-col flex-grow space-y-2">
+                <label for="dosbing1" class="w-full text-sm font-medium text-gray-700">Dosbing 1</label>
 
-            <select id="dosbing1"
-                wire:model="dosbing1"
-                class="flex-grow bg-gray-100 border border-gray-300 rounded-lg p-2.5 text-sm">
-                <option value="">Pilih dosen...</option>
-                @foreach ($lecturers1 as $id => $name)
-                    <option value="{{ $id }}">{{ $name }}</option>
-                @endforeach
-            </select>
+                <select id="dosbing1"
+                    wire:model="dosbing1"
+                    class="bg-gray-100 border border-gray-300 rounded-lg p-2.5 text-sm">
+                    <option value="">Pilih dosen...</option>
+                    @foreach ($lecturers1 as $id => $name)
+                        <option value="{{ $id }}">{{ $name }}</option>
+                    @endforeach
+                </select>
+
+                <!-- Textbox tambahan -->
+                <input type="text"
+                    wire:model.defer="reason1"
+                    placeholder="Tulis alasan pengajuan dosbing 1..."
+                    class="bg-white border border-gray-300 rounded-lg p-2.5 text-sm focus:ring focus:ring-gray-200" />
+            </div>
 
             <button wire:click="submit(0)"
-                class="px-3 py-1.5 sm:px-6 sm:py-2.5 bg-gray-700 text-white font-medium rounded-lg text-sm sm:text-base hover:bg-gray-800 transition duration-200">
+                class="px-3 py-1.5 sm:px-6 sm:py-2.5 bg-gray-700 text-white font-medium rounded-lg text-sm sm:text-base hover:bg-gray-800 transition duration-200 self-end sm:self-center">
                 Ajukan
             </button>
         </div>
 
         <!-- Dosbing 2 -->
-        <div class="flex flex-col space-y-2 sm:flex-row sm:items-center sm:space-y-0 sm:space-x-4">
-            <label for="dosbing2" class="w-28 text-sm font-medium text-gray-700">Dosbing 2</label>
+        <div class="flex flex-col space-y-3 sm:space-y-2 sm:flex-row sm:items-start sm:space-x-4">
+            <div class="flex flex-col flex-grow space-y-2">
+                <label for="dosbing2" class="w-full text-sm font-medium text-gray-700">Dosbing 2</label>
 
-            <select id="dosbing2"
-                wire:model="dosbing2"
-                class="flex-grow bg-gray-100 border border-gray-300 rounded-lg p-2.5 text-sm">
-                <option value="">Pilih dosen...</option>
-                @foreach ($lecturers2 as $id => $name)
-                    <option value="{{ $id }}">{{ $name }}</option>
-                @endforeach
-            </select>
+                <select id="dosbing2"
+                    wire:model="dosbing2"
+                    class="bg-gray-100 border border-gray-300 rounded-lg p-2.5 text-sm">
+                    <option value="">Pilih dosen...</option>
+                    @foreach ($lecturers2 as $id => $name)
+                        <option value="{{ $id }}">{{ $name }}</option>
+                    @endforeach
+                </select>
+
+                <!-- Textbox tambahan -->
+                <input type="text"
+                    wire:model.defer="reason2"
+                    placeholder="Tulis alasan pengajuan dosbing 2..."
+                    class="bg-white border border-gray-300 rounded-lg p-2.5 text-sm focus:ring focus:ring-gray-200" />
+            </div>
 
             <button wire:click="submit(1)"
-                class="px-3 py-1.5 sm:px-6 sm:py-2.5 bg-gray-700 text-white font-medium rounded-lg text-sm sm:text-base hover:bg-gray-800 transition duration-200">
+                class="px-3 py-1.5 sm:px-6 sm:py-2.5 bg-gray-700 text-white font-medium rounded-lg text-sm sm:text-base hover:bg-gray-800 transition duration-200 self-end sm:self-center">
                 Ajukan
             </button>
         </div>
 
     </div>
 
-    {{-- Tambahkan Tom Select agar searchable --}}
     <script>
         document.addEventListener('livewire:load', () => {
             const initSelect = (id) => {
