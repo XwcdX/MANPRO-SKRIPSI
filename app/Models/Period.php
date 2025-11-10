@@ -13,79 +13,83 @@ class Period extends Model
         'name',
         'start_date',
         'end_date',
-        'registration_start',
         'registration_end',
-        'supervision_selection_deadline',
-        'title_submission_deadline',
-        'is_active',
-        'status',
-        'max_students',
+        'default_quota',
+        'archived_at',
     ];
 
     protected $casts = [
         'start_date' => 'date',
         'end_date' => 'date',
-        'registration_start' => 'date',
         'registration_end' => 'date',
-        'supervision_selection_deadline' => 'date',
-        'title_submission_deadline' => 'date',
-        'is_active' => 'boolean',
+        'default_quota' => 'integer',
+        'archived_at' => 'datetime',
     ];
 
-    protected static function boot()
+    public function getStatusAttribute(): string
     {
-        parent::boot();
+        if ($this->archived_at) {
+            return 'archived';
+        }
 
-        static::saving(function ($period) {
-            if ($period->is_active) {
-                static::where('id', '!=', $period->id)
-                    ->where('is_active', true)
-                    ->update(['is_active' => false]);
-            }
-        });
+        $now = now();
+
+        if ($now->lt($this->start_date)) {
+            return 'upcoming';
+        }
+
+        if ($now->between($this->start_date, $this->registration_end)) {
+            return 'registration_open';
+        }
+
+        if ($now->between($this->registration_end, $this->end_date)) {
+            return 'in_progress';
+        }
+
+        return 'completed';
+    }
+
+    public function getIsActiveAttribute(): bool
+    {
+        return in_array($this->status, ['registration_open', 'in_progress']) && !$this->archived_at;
     }
 
     public static function active()
     {
-        return static::where('is_active', true)->first();
+        return static::whereNull('archived_at')
+            ->where(function($query) {
+                $now = now();
+                $query->where(function($q) use ($now) {
+                    $q->where('start_date', '<=', $now)
+                      ->where('end_date', '>=', $now);
+                });
+            })
+            ->first();
     }
 
     public function isRegistrationOpen(): bool
     {
-        $now = now();
-        return $this->is_active
-            && $this->status === 'registration_open'
-            && $now->between($this->registration_start, $this->registration_end);
+        return $this->status === 'registration_open';
     }
 
     public function isInProgress(): bool
     {
-        $now = now();
-        return $this->is_active
-            && $now->between($this->start_date, $this->end_date);
+        return $this->status === 'in_progress';
     }
 
-    public function canSubmitTitle(): bool
+    public function archive(): void
     {
-        $now = now();
-        return $this->is_active
-            && $this->status === 'in_progress'
-            && (!$this->title_submission_deadline || $now->lte($this->title_submission_deadline));
+        $this->archived_at = now();
+        $this->save();
     }
 
-    public function canSelectSupervisor(): bool
+    public function getLecturerQuota(Lecturer $lecturer): int
     {
-        $now = now();
-        return $this->is_active
-            && $now->between($this->registration_start, $this->supervision_selection_deadline ?? $this->end_date);
-    }
+        $customQuota = LecturerPeriodQuota::where('lecturer_id', $lecturer->id)
+            ->where('period_id', $this->id)
+            ->first();
 
-    public function hasReachedMaxStudents(): bool
-    {
-        if (!$this->max_students) {
-            return false;
-        }
-        return $this->students()->wherePivot('is_active', true)->count() >= $this->max_students;
+        return $customQuota ? $customQuota->max_students : $this->default_quota;
     }
 
     public function students()
@@ -108,6 +112,16 @@ class Period extends Model
     public function lecturerTopics()
     {
         return $this->hasMany(LecturerTopic::class);
+    }
+
+    public function lecturerQuotas()
+    {
+        return $this->hasMany(LecturerPeriodQuota::class);
+    }
+
+    public function scopeNotArchived($query)
+    {
+        return $query->whereNull('archived_at');
     }
 
     public function statusHistories()

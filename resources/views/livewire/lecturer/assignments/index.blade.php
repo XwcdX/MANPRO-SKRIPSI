@@ -19,8 +19,10 @@ new #[Layout('components.layouts.lecturer')] class extends Component {
     {
         return [
             'lecturers' => Lecturer::with('roles')
-                ->where('name', 'like', '%' . $this->search . '%')
-                ->orWhere('email', 'like', '%' . $this->search . '%')
+                ->where(function($query) {
+                    $query->where('name', 'like', '%' . $this->search . '%')
+                          ->orWhere('email', 'like', '%' . $this->search . '%');
+                })
                 ->paginate(15),
         ];
     }
@@ -29,7 +31,6 @@ new #[Layout('components.layouts.lecturer')] class extends Component {
 <div>
     <section class="w-full">
         <div class="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-700 rounded-lg shadow-xl mb-10 p-6 sm:p-8">
-            {{-- Header and Search Bar --}}
             <div class="flex flex-col sm:flex-row justify-between items-center mb-6 gap-4">
                 <h1 class="text-3xl text-black dark:text-white font-bold">
                     Assign Roles to Lecturers
@@ -46,7 +47,6 @@ new #[Layout('components.layouts.lecturer')] class extends Component {
 
             <hr class="border-t border-zinc-200 dark:border-zinc-700 mb-6">
 
-            {{-- Lecturers Table --}}
             <div class="overflow-x-auto">
                 <table class="min-w-full divide-y divide-zinc-200 dark:divide-zinc-700">
                     <thead class="bg-zinc-50 dark:bg-zinc-800">
@@ -102,7 +102,6 @@ new #[Layout('components.layouts.lecturer')] class extends Component {
                 </table>
             </div>
 
-            {{-- Pagination Links --}}
             <div class="mt-6">
                 {{ $lecturers->links() }}
             </div>

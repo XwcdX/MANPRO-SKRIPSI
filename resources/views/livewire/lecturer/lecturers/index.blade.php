@@ -78,9 +78,11 @@ class extends Component {
     public function with(): array
     {
         return [
-            'lecturers' => Lecturer::with('division')
-                ->where('name', 'like', '%' . $this->search . '%')
-                ->orWhere('email', 'like', '%' . $this->search . '%')
+            'lecturers' => Lecturer::with(['division', 'roles'])
+                ->where(function($query) {
+                    $query->where('name', 'like', '%' . $this->search . '%')
+                          ->orWhere('email', 'like', '%' . $this->search . '%');
+                })
                 ->paginate(15),
         ];
     }
@@ -248,8 +250,8 @@ class extends Component {
                                 <td class="px-6 py-4 whitespace-nowrap text-sm text-zinc-500 dark:text-zinc-400">
                                     {{ $lecturer->email }}
                                 </td>
-                                <td class="px-6 py-4 whitespace-nowrap text-sm text-zinc-500 dark:text-zinc-400">
-                                    <div class="flex flex-col gap-1">
+                                <td class="px-6 py-4 text-sm text-zinc-500 dark:text-zinc-400">
+                                    <div class="flex flex-wrap gap-1">
                                         @forelse($lecturer->roles as $role)
                                             <span
                                                 class="px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200">

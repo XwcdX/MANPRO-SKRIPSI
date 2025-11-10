@@ -78,6 +78,7 @@ Route::prefix('lecturer')->name('lecturer.')->middleware(['auth:lecturer', 'veri
         Volt::route('{lecturer}/roles', 'lecturer.assignments.edit')->name('assignments.edit');
 
         Volt::route('periods', 'lecturer.periods.index')->name('periods.index');
+        Volt::route('periods/{period}/quotas', 'lecturer.periods.manage-quotas')->name('periods.manage-quotas');
     });
 
     Volt::route('profile', 'lecturer.profile')->name('profile');

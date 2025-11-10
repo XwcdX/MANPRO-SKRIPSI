@@ -15,9 +15,7 @@ new #[Layout('components.layouts.lecturer')] class extends Component {
     {
         $this->user = Auth::user();
 
-        if (method_exists($this->user, 'supervisions')) {
-            $this->supervisionCount = $this->user->supervisions()->where('is_active', true)->count();
-        }
+        $this->supervisionCount = $this->user->activeSupervisions()->count();
 
         $this->pendingTitlesCount = Student::where('status', 1)->count();
     }

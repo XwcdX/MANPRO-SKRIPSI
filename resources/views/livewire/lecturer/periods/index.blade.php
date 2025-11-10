@@ -18,13 +18,8 @@ state([
     'name' => '',
     'start_date' => '',
     'end_date' => '',
-    'registration_start' => '',
     'registration_end' => '',
-    'supervision_selection_deadline' => null,
-    'title_submission_deadline' => null,
-    'is_active' => false,
-    'status' => 'upcoming',
-    'max_students' => null,
+    'default_quota' => 12,
     'showArchiveConfirmModal' => false,
     'archivingPeriodId' => null,
 ]);
@@ -33,14 +28,9 @@ rules(
     fn() => [
         'name' => ['required', 'string', 'max:255', Rule::unique('periods')->ignore($this->editing?->id)],
         'start_date' => 'required|date',
-        'end_date' => 'required|date|after_or_equal:start_date',
-        'registration_start' => 'required|date',
-        'registration_end' => 'required|date|after_or_equal:registration_start',
-        'supervision_selection_deadline' => 'nullable|date|after_or_equal:registration_end',
-        'title_submission_deadline' => 'nullable|date|after_or_equal:supervision_selection_deadline',
-        'is_active' => 'required|boolean',
-        'status' => 'required|in:upcoming,registration_open,in_progress,completed,archived',
-        'max_students' => 'nullable|integer|min:1',
+        'end_date' => 'required|date|after:start_date',
+        'registration_end' => 'required|date|after:start_date|before_or_equal:end_date',
+        'default_quota' => 'required|integer|min:1|max:50',
     ],
 );
 
@@ -72,9 +62,7 @@ $archivePeriod = function () {
     if ($this->archivingPeriodId) {
         $period = Period::find($this->archivingPeriodId);
         if ($period) {
-            $period->is_active = false;
-            $period->status = 'archived';
-            $period->save();
+            $period->archive();
             session()->flash('success', "Period '{$period->name}' has been archived.");
         }
     }
@@ -84,10 +72,9 @@ $archivePeriod = function () {
 
 $create = function () {
     $this->resetErrorBag();
-    $this->reset('name', 'start_date', 'end_date', 'registration_start', 'registration_end', 'supervision_selection_deadline', 'title_submission_deadline', 'is_active', 'status', 'max_students', 'editing');
+    $this->reset('name', 'start_date', 'end_date', 'registration_end', 'default_quota', 'editing');
     $this->editing = new Period();
-    $this->is_active = false;
-    $this->status = 'upcoming';
+    $this->default_quota = 12;
     $this->showModal = true;
 };
 
@@ -100,15 +87,9 @@ $edit = function (Period $period) {
 
     $this->start_date = Carbon::parse($period->start_date)->format('Y-m-d');
     $this->end_date = Carbon::parse($period->end_date)->format('Y-m-d');
-    $this->registration_start = Carbon::parse($period->registration_start)->format('Y-m-d');
     $this->registration_end = Carbon::parse($period->registration_end)->format('Y-m-d');
 
-    $this->supervision_selection_deadline = $period->supervision_selection_deadline ? Carbon::parse($period->supervision_selection_deadline)->format('Y-m-d') : null;
-    $this->title_submission_deadline = $period->title_submission_deadline ? Carbon::parse($period->title_submission_deadline)->format('Y-m-d') : null;
-
-    $this->is_active = $period->is_active;
-    $this->status = $period->status;
-    $this->max_students = $period->max_students;
+    $this->default_quota = $period->default_quota;
 
     $this->showModal = true;
 };
@@ -118,26 +99,14 @@ $save = function () {
     if (!$this->editing) {
         $this->editing = new Period();
     }
-    DB::transaction(function () {
-        if ($this->is_active) {
-            Period::where('is_active', true)->update(['is_active' => false]);
-        }
-        $this->editing->fill($this->only(['name', 'start_date', 'end_date', 'registration_start', 'registration_end', 'supervision_selection_deadline', 'title_submission_deadline', 'is_active', 'status', 'max_students']));
-        $this->editing->save();
-    });
+    $this->editing->fill($this->only(['name', 'start_date', 'end_date', 'registration_end', 'default_quota']));
+    $this->editing->save();
     session()->flash('success', 'Period saved successfully.');
     $this->showModal = false;
     $this->resetPage();
 };
 
-$activatePeriod = function (Period $period) {
-    DB::transaction(function () use ($period) {
-        Period::where('is_active', true)->update(['is_active' => false]);
-        $period->update(['is_active' => true, 'status' => 'registration_open']);
-    });
-    session()->flash('success', "Period '{$period->name}' has been activated.");
-    $this->resetPage();
-};
+
 
 $deletePeriod = function (Period $period) {
     $period->delete();
@@ -182,7 +151,7 @@ $deletePeriod = function (Period $period) {
                                 Name</th>
                             <th scope="col"
                                 class="px-6 py-3 text-left text-xs font-medium text-zinc-500 dark:text-zinc-300 uppercase tracking-wider">
-                                Registration Dates</th>
+                                Period Dates</th>
                             <th scope="col"
                                 class="px-6 py-3 text-left text-xs font-medium text-zinc-500 dark:text-zinc-300 uppercase tracking-wider">
                                 Status</th>
@@ -199,8 +168,8 @@ $deletePeriod = function (Period $period) {
                                     class="px-6 py-4 whitespace-nowrap text-sm font-medium text-zinc-900 dark:text-white">
                                     {{ $period->name }}</td>
                                 <td class="px-6 py-4 whitespace-nowrap text-sm text-zinc-500 dark:text-zinc-400">
-                                    {{ Carbon::parse($period->registration_start)->format('d M Y') }} -
-                                    {{ Carbon::parse($period->registration_end)->format('d M Y') }}
+                                    {{ Carbon::parse($period->start_date)->format('d M Y') }} -
+                                    {{ Carbon::parse($period->end_date)->format('d M Y') }}
                                 </td>
                                 <td class="px-6 py-4 whitespace-nowrap">
                                     <span
@@ -225,12 +194,6 @@ $deletePeriod = function (Period $period) {
                                         @if ($period->status === 'archived')
                                             <span class="text-xs italic text-zinc-500">Archived</span>
                                         @else
-                                            @if (!$period->is_active && $period->status !== 'archived')
-                                                <flux:button wire:click="activatePeriod('{{ $period->id }}')"
-                                                    variant="outline" size="sm" class="cursor-pointer">Activate
-                                                </flux:button>
-                                            @endif
-
                                             @if ($period->status === 'completed')
                                                 <flux:button wire:click="confirmArchive('{{ $period->id }}')"
                                                     variant="outline" size="sm" class="cursor-pointer">Archive
@@ -239,6 +202,9 @@ $deletePeriod = function (Period $period) {
 
                                             <flux:button wire:click="edit('{{ $period->id }}')" variant="ghost"
                                                 size="sm" class="cursor-pointer">Edit</flux:button>
+
+                                            <flux:button href="{{ route('lecturer.periods.manage-quotas', $period) }}" variant="outline"
+                                                size="sm" class="cursor-pointer">Manage Quotas</flux:button>
 
                                             <flux:button wire:click="deletePeriod('{{ $period->id }}')"
                                                 wire:confirm="Are you sure you want to permanently delete this period and all its data?"
@@ -276,31 +242,28 @@ $deletePeriod = function (Period $period) {
                         <flux:input wire:model="name" label="Period Name" placeholder="e.g., Odd 2025/2026" required />
                     </div>
 
-                    <flux:input wire:model="start_date" type="date" label="Period Start Date" required />
+                    <flux:input wire:model="start_date" type="date" label="Period Start Date" required>
+                        <p class="text-xs text-zinc-500 mt-1">Registration opens automatically on this date</p>
+                    </flux:input>
                     <flux:input wire:model="end_date" type="date" label="Period End Date" required />
 
-                    <flux:input wire:model="registration_start" type="date" label="Registration Start" required />
-                    <flux:input wire:model="registration_end" type="date" label="Registration End" required />
-
-                    <flux:input wire:model="supervision_selection_deadline" type="date"
-                        label="Supervisor Selection Deadline" />
-                    <flux:input wire:model="title_submission_deadline" type="date"
-                        label="Title Submission Deadline" />
-
-                    <flux:select wire:model="status" label="Status" required>
-                        <option value="upcoming">Upcoming</option>
-                        <option value="registration_open">Registration Open</option>
-                        <option value="in_progress">In Progress</option>
-                        <option value="completed">Completed</option>
-                        <option value="archived">Archived</option>
-                    </flux:select>
-                    <flux:input wire:model="max_students" type="number" label="Max Students (optional)" />
+                    <flux:input wire:model="registration_end" type="date" label="Registration Close Date" required>
+                        <p class="text-xs text-zinc-500 mt-1">After this date, period moves to "In Progress"</p>
+                    </flux:input>
+                    <flux:input wire:model="default_quota" type="number" label="Default Lecturer Quota" required
+                        placeholder="12" />
 
                     <div class="md:col-span-2">
-                        <flux:checkbox wire:model="is_active" label="Set as Active Registration Period">
-                            <p class="text-xs text-zinc-500 mt-1">Note: Activating this will deactivate any other
-                                currently active period.</p>
-                        </flux:checkbox>
+                        <div class="p-4 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg text-sm text-blue-900 dark:text-blue-200">
+                            <p class="font-semibold mb-1">Automatic Status:</p>
+                            <ul class="list-disc list-inside space-y-1">
+                                <li>Before start date: <strong>Upcoming</strong></li>
+                                <li>Start date to registration close: <strong>Registration Open</strong></li>
+                                <li>After registration close to end date: <strong>In Progress</strong></li>
+                                <li>After end date: <strong>Completed</strong> (can be archived)</li>
+                            </ul>
+                        </div>
+                        <p class="text-xs text-zinc-500 mt-2">The default quota applies to all lecturers. You can adjust individual lecturer quotas after creating the period.</p>
                     </div>
                 </div>
 

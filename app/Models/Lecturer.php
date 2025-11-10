@@ -109,4 +109,9 @@ class Lecturer extends Authenticatable implements MustVerifyEmail
         $capacity = $maxStudents - $this->activeSupervisions()->count();
         return $capacity > 0 ? $capacity : 0;
     }
+
+    public function lecturerQuotas()
+    {
+        return $this->hasMany(LecturerPeriodQuota::class);
+    }
 }
