@@ -13,7 +13,7 @@ return new class extends Migration {
         Schema::create('thesis_presentations', function (Blueprint $table) {
             $table->uuid('id')->primary();
             $table->foreignUuid('venue_id')->constrained('presentation_venues')->onDelete('restrict');
-            $table->foreignUuid('schedule_id')->constrained('schedules')->onDelete('restrict');
+            $table->uuid('schedule_id')->nullable(); //change later :)
             $table->foreignUuid('student_id')->constrained('students')->onDelete('restrict');
             $table->enum('presentation_type', ['proposal', 'final'])->default('final');
             $table->text('notes')->nullable();

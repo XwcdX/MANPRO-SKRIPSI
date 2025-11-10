@@ -18,22 +18,16 @@ class PermissionSeeder extends Seeder
 
         $permissions = [
             // Student management
-            'view-students', 'edit-student-status', 'assign-supervisors', 'view-student-details',
+            'view-students', 'edit-student-status',
             
-            // Thesis management
-            'approve-thesis-title', 'decline-thesis-title', 'schedule-presentation', 'evaluate-thesis', 'add-revision-notes',
+            // Thesis & Topics
+            'approve-thesis-title', 'offer-topics',
             
             // Schedule management
-            'manage-schedules', 'set-availability', 'view-all-schedules',
+            'set-availability',
             
-            // Division management (for heads)
-            'manage-division', 'assign-examiners', 'view-division-reports',
-            
-            // System administration
-            'manage-lecturers', 'view-system-reports', 'manage-venues',
-
-            // RBAC - The most powerful permission
-            'manage-roles',
+            // System administration (superadmin only)
+            'administrate',
         ];
 
         foreach ($permissions as $permissionName) {
@@ -50,41 +44,32 @@ class PermissionSeeder extends Seeder
 
         $supervisorRole->syncPermissions([
             'view-students',
-            'view-student-details',
-            'add-revision-notes',
             'set-availability',
-            'view-all-schedules',
         ]);
 
         $seniorSupervisorRole->syncPermissions([
             'view-students',
             'edit-student-status',
-            'view-student-details',
-            'add-revision-notes',
             'set-availability',
-            'view-all-schedules',
-            'evaluate-thesis',
+            'offer-topics',
         ]);
 
         $headDivisionRole->syncPermissions([
             'view-students',
             'edit-student-status',
-            'assign-supervisors',
-            'view-student-details',
             'approve-thesis-title',
-            'decline-thesis-title',
-            'schedule-presentation',
-            'evaluate-thesis',
-            'add-revision-notes',
-            'manage-schedules',
             'set-availability',
-            'view-all-schedules',
-            'manage-division',
-            'assign-examiners',
-            'view-division-reports',
+            'offer-topics',
         ]);
 
-        $headThesisRole->givePermissionTo(Permission::where('guard_name', $guardName)->get());
+        $headThesisRole->syncPermissions([
+            'view-students',
+            'edit-student-status',
+            'approve-thesis-title',
+            'set-availability',
+            'offer-topics',
+            'administrate',
+        ]);
 
         $this->command->info('Permissions have been assigned to roles.');
 

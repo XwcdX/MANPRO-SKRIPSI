@@ -2,25 +2,24 @@
 
 namespace App\Models;
 
-use Illuminate\Database\Eloquent\Concerns\HasUuids;
 use Illuminate\Database\Eloquent\Model;
 
-class LecturerTopic extends Model
+class LecturerAvailability extends Model
 {
-    use HasUuids;
+    protected $table = 'lecturer_availability';
 
     protected $fillable = [
         'lecturer_id',
         'period_id',
-        'topic',
-        'description',
-        'student_quota',
+        'type',
+        'date',
+        'time_slot',
         'is_available',
     ];
 
     protected $casts = [
+        'date' => 'date',
         'is_available' => 'boolean',
-        'student_quota' => 'integer',
     ];
 
     public function lecturer()

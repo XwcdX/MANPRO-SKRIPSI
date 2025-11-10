@@ -4,7 +4,6 @@ use function Livewire\Volt\{state, layout, rules, with, uses};
 use Livewire\WithPagination;
 use App\Models\Period;
 use Illuminate\Validation\Rule;
-use Illuminate\Support\Facades\DB;
 use Carbon\Carbon;
 
 layout('components.layouts.lecturer');
@@ -19,6 +18,12 @@ state([
     'start_date' => '',
     'end_date' => '',
     'registration_end' => '',
+    'proposal_hearing_start' => '',
+    'proposal_hearing_end' => '',
+    'thesis_start' => '',
+    'thesis_end' => '',
+    'schedule_start_time' => '07:30',
+    'schedule_end_time' => '18:00',
     'default_quota' => 12,
     'showArchiveConfirmModal' => false,
     'archivingPeriodId' => null,
@@ -30,6 +35,12 @@ rules(
         'start_date' => 'required|date',
         'end_date' => 'required|date|after:start_date',
         'registration_end' => 'required|date|after:start_date|before_or_equal:end_date',
+        'proposal_hearing_start' => 'nullable|date|after:registration_end',
+        'proposal_hearing_end' => 'nullable|date|after:proposal_hearing_start',
+        'thesis_start' => 'nullable|date|after:proposal_hearing_end',
+        'thesis_end' => 'nullable|date|after:thesis_start|before_or_equal:end_date',
+        'schedule_start_time' => 'required|date_format:H:i',
+        'schedule_end_time' => 'required|date_format:H:i|after:schedule_start_time',
         'default_quota' => 'required|integer|min:1|max:50',
     ],
 );
@@ -72,9 +83,11 @@ $archivePeriod = function () {
 
 $create = function () {
     $this->resetErrorBag();
-    $this->reset('name', 'start_date', 'end_date', 'registration_end', 'default_quota', 'editing');
+    $this->reset('name', 'start_date', 'end_date', 'registration_end', 'proposal_hearing_start', 'proposal_hearing_end', 'thesis_start', 'thesis_end', 'schedule_start_time', 'schedule_end_time', 'default_quota', 'editing');
     $this->editing = new Period();
     $this->default_quota = 12;
+    $this->schedule_start_time = '07:30';
+    $this->schedule_end_time = '18:00';
     $this->showModal = true;
 };
 
@@ -88,6 +101,12 @@ $edit = function (Period $period) {
     $this->start_date = Carbon::parse($period->start_date)->format('Y-m-d');
     $this->end_date = Carbon::parse($period->end_date)->format('Y-m-d');
     $this->registration_end = Carbon::parse($period->registration_end)->format('Y-m-d');
+    $this->proposal_hearing_start = $period->proposal_hearing_start ? Carbon::parse($period->proposal_hearing_start)->format('Y-m-d') : '';
+    $this->proposal_hearing_end = $period->proposal_hearing_end ? Carbon::parse($period->proposal_hearing_end)->format('Y-m-d') : '';
+    $this->thesis_start = $period->thesis_start ? Carbon::parse($period->thesis_start)->format('Y-m-d') : '';
+    $this->thesis_end = $period->thesis_end ? Carbon::parse($period->thesis_end)->format('Y-m-d') : '';
+    $this->schedule_start_time = $period->schedule_start_time ? substr($period->schedule_start_time, 0, 5) : '07:30';
+    $this->schedule_end_time = $period->schedule_end_time ? substr($period->schedule_end_time, 0, 5) : '18:00';
 
     $this->default_quota = $period->default_quota;
 
@@ -99,14 +118,20 @@ $save = function () {
     if (!$this->editing) {
         $this->editing = new Period();
     }
-    $this->editing->fill($this->only(['name', 'start_date', 'end_date', 'registration_end', 'default_quota']));
+    $data = $this->only(['name', 'start_date', 'end_date', 'registration_end', 'proposal_hearing_start', 'proposal_hearing_end', 'thesis_start', 'thesis_end', 'schedule_start_time', 'schedule_end_time', 'default_quota']);
+
+    foreach (['proposal_hearing_start', 'proposal_hearing_end', 'thesis_start', 'thesis_end'] as $field) {
+        if (empty($data[$field])) {
+            $data[$field] = null;
+        }
+    }
+
+    $this->editing->fill($data);
     $this->editing->save();
     session()->flash('success', 'Period saved successfully.');
     $this->showModal = false;
     $this->resetPage();
 };
-
-
 
 $deletePeriod = function (Period $period) {
     $period->delete();
@@ -203,8 +228,9 @@ $deletePeriod = function (Period $period) {
                                             <flux:button wire:click="edit('{{ $period->id }}')" variant="ghost"
                                                 size="sm" class="cursor-pointer">Edit</flux:button>
 
-                                            <flux:button href="{{ route('lecturer.periods.manage-quotas', $period) }}" variant="outline"
-                                                size="sm" class="cursor-pointer">Manage Quotas</flux:button>
+                                            <flux:button href="{{ route('lecturer.periods.manage-quotas', $period) }}"
+                                                variant="outline" size="sm" class="cursor-pointer">Manage Quotas
+                                            </flux:button>
 
                                             <flux:button wire:click="deletePeriod('{{ $period->id }}')"
                                                 wire:confirm="Are you sure you want to permanently delete this period and all its data?"
@@ -242,19 +268,45 @@ $deletePeriod = function (Period $period) {
                         <flux:input wire:model="name" label="Period Name" placeholder="e.g., Odd 2025/2026" required />
                     </div>
 
-                    <flux:input wire:model="start_date" type="date" label="Period Start Date" required>
-                        <p class="text-xs text-zinc-500 mt-1">Registration opens automatically on this date</p>
-                    </flux:input>
+                    <flux:input wire:model="start_date" type="date" label="Period Start Date" required />
                     <flux:input wire:model="end_date" type="date" label="Period End Date" required />
 
-                    <flux:input wire:model="registration_end" type="date" label="Registration Close Date" required>
-                        <p class="text-xs text-zinc-500 mt-1">After this date, period moves to "In Progress"</p>
-                    </flux:input>
+                    <flux:input wire:model="registration_end" type="date" label="Registration Close Date" required />
                     <flux:input wire:model="default_quota" type="number" label="Default Lecturer Quota" required
                         placeholder="12" />
 
+                    <div class="md:col-span-2 border-t border-zinc-200 dark:border-zinc-700 pt-4 mt-2">
+                        <h3 class="text-sm font-semibold text-zinc-700 dark:text-zinc-300 mb-3">Proposal Hearing Period
+                            (Optional)</h3>
+                        <div class="grid grid-cols-2 gap-4">
+                            <flux:input wire:model="proposal_hearing_start" type="date" label="Start Date" />
+                            <flux:input wire:model="proposal_hearing_end" type="date" label="End Date" />
+                        </div>
+                    </div>
+
+                    <div class="md:col-span-2 border-t border-zinc-200 dark:border-zinc-700 pt-4 mt-2">
+                        <h3 class="text-sm font-semibold text-zinc-700 dark:text-zinc-300 mb-3">Thesis Defense Period
+                            (Optional)</h3>
+                        <div class="grid grid-cols-2 gap-4">
+                            <flux:input wire:model="thesis_start" type="date" label="Start Date" />
+                            <flux:input wire:model="thesis_end" type="date" label="End Date" />
+                        </div>
+                    </div>
+
+                    <div class="md:col-span-2 border-t border-zinc-200 dark:border-zinc-700 pt-4 mt-2">
+                        <h3 class="text-sm font-semibold text-zinc-700 dark:text-zinc-300 mb-3">Schedule Time Range
+                        </h3>
+                        <div class="grid grid-cols-2 gap-4">
+                            <flux:input wire:model="schedule_start_time" type="time" label="Start Time" />
+                            <flux:input wire:model="schedule_end_time" type="time" label="End Time" />
+                        </div>
+                        <p class="text-xs text-zinc-500 mt-2">This defines the available time slots for scheduling
+                            proposal hearings and thesis defenses.</p>
+                    </div>
+
                     <div class="md:col-span-2">
-                        <div class="p-4 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg text-sm text-blue-900 dark:text-blue-200">
+                        <div
+                            class="p-4 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg text-sm text-blue-900 dark:text-blue-200">
                             <p class="font-semibold mb-1">Automatic Status:</p>
                             <ul class="list-disc list-inside space-y-1">
                                 <li>Before start date: <strong>Upcoming</strong></li>
@@ -263,7 +315,8 @@ $deletePeriod = function (Period $period) {
                                 <li>After end date: <strong>Completed</strong> (can be archived)</li>
                             </ul>
                         </div>
-                        <p class="text-xs text-zinc-500 mt-2">The default quota applies to all lecturers. You can adjust individual lecturer quotas after creating the period.</p>
+                        <p class="text-xs text-zinc-500 mt-2">The default quota applies to all lecturers. You can
+                            adjust individual lecturer quotas after creating the period.</p>
                     </div>
                 </div>
 

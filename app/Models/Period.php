@@ -14,14 +14,24 @@ class Period extends Model
         'start_date',
         'end_date',
         'registration_end',
+        'proposal_hearing_start',
+        'proposal_hearing_end',
+        'thesis_start',
+        'thesis_end',
+        'schedule_start_time',
+        'schedule_end_time',
         'default_quota',
         'archived_at',
     ];
 
     protected $casts = [
-        'start_date' => 'date',
-        'end_date' => 'date',
-        'registration_end' => 'date',
+        'start_date' => 'datetime',
+        'end_date' => 'datetime',
+        'registration_end' => 'datetime',
+        'proposal_hearing_start' => 'datetime',
+        'proposal_hearing_end' => 'datetime',
+        'thesis_start' => 'datetime',
+        'thesis_end' => 'datetime',
         'default_quota' => 'integer',
         'archived_at' => 'datetime',
     ];
@@ -33,25 +43,51 @@ class Period extends Model
         }
 
         $now = now();
-
+        
+        if (!$this->start_date) {
+            return 'upcoming';
+        }
+        
         if ($now->lt($this->start_date)) {
             return 'upcoming';
         }
 
-        if ($now->between($this->start_date, $this->registration_end)) {
+        if ($this->registration_end && $now->between($this->start_date, $this->registration_end)) {
             return 'registration_open';
         }
 
-        if ($now->between($this->registration_end, $this->end_date)) {
-            return 'in_progress';
+        if ($this->proposal_hearing_start && $this->registration_end && $now->between($this->registration_end, $this->proposal_hearing_start)) {
+            return 'proposal_in_progress';
         }
 
-        return 'completed';
+        if ($this->proposal_hearing_start && $this->proposal_hearing_end && $now->between($this->proposal_hearing_start, $this->proposal_hearing_end)) {
+            return 'proposal_hearing';
+        }
+
+        if ($this->thesis_start && $now->between($this->proposal_hearing_end ?? $this->registration_end, $this->thesis_start)) {
+            return 'thesis_in_progress';
+        }
+
+        if ($this->thesis_start && $this->thesis_end && $now->between($this->thesis_start, $this->thesis_end)) {
+            return 'thesis';
+        }
+
+        if ($this->end_date && $now->gt($this->end_date)) {
+            return 'completed';
+        }
+
+        return 'proposal_in_progress';
     }
 
     public function getIsActiveAttribute(): bool
     {
-        return in_array($this->status, ['registration_open', 'in_progress']) && !$this->archived_at;
+        return in_array($this->status, [
+            'registration_open',
+            'proposal_in_progress',
+            'proposal_hearing',
+            'thesis_in_progress',
+            'thesis'
+        ]) && !$this->archived_at;
     }
 
     public static function active()
@@ -99,10 +135,7 @@ class Period extends Model
             ->withTimestamps();
     }
 
-    public function schedules()
-    {
-        return $this->hasMany(Schedule::class);
-    }
+
 
     public function supervisionApplications()
     {
