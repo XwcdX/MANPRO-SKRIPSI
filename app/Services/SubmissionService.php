@@ -113,9 +113,8 @@ class SubmissionService
                 throw new \Exception('Data mahasiswa atau dosen tidak ditemukan.');
             }
 
-            $period = $this->crud->setModel(new Period())
-                ->getModel()
-                ->where('is_active', true)
+            $period = $student->periods()
+                ->wherePivot('is_active', true)
                 ->first();
 
             if (!$period) {
