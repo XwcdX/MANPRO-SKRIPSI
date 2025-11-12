@@ -4,23 +4,28 @@ namespace App\Providers;
 
 use Illuminate\Auth\Middleware\RedirectIfAuthenticated;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Route;
 use Illuminate\Support\Facades\View;
 use Illuminate\Support\ServiceProvider;
 use Illuminate\Support\Facades\Gate;
 use App\Models\Lecturer;
+use Livewire\Livewire;
 
 class AppServiceProvider extends ServiceProvider
 {
     public function boot()
     {
-        View::share('dashboardRoute', function () {
-            if (auth('student')->check()) {
-                return route('student.dashboard');
-            }
-            if (auth('lecturer')->check()) {
-                return route('lecturer.dashboard');
-            }
-            return route('login');
+        View::composer('*', function ($view) {
+            $dashboardRoute = function () {
+                if (auth('student')->check()) {
+                    return route('student.dashboard');
+                }
+                if (auth('lecturer')->check()) {
+                    return route('lecturer.dashboard');
+                }
+                return route('login');
+            };
+            $view->with('dashboardRoute', $dashboardRoute);
         });
 
         Gate::define('supervise-students', function (Lecturer $lecturer) {

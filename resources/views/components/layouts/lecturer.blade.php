@@ -22,25 +22,21 @@
                 </flux:navlist.item>
             </flux:navlist.group>
 
-            <flux:navlist.group :heading="__('Management')" class="grid">
-                <flux:navlist.item icon="users" :href="route('lecturer.students.index')"
-                    :current="request()->routeIs('lecturer.students.*')" wire:navigate>{{ __('View Students') }}
-                </flux:navlist.item>
-                <flux:navlist.item icon="academic-cap" :href="route('lecturer.supervisions.index')"
-                    :current="request()->routeIs('lecturer.supervisions.*')" wire:navigate>{{ __('Supervisions') }}
-                </flux:navlist.item>
-                <flux:navlist.item icon="document-check" :href="route('lecturer.thesis.titles')"
-                    :current="request()->routeIs('lecturer.thesis.*')" wire:navigate>{{ __('Thesis Titles') }}
+            @can('offer-topics')
+                <flux:navlist.group :heading="__('Topics')" class="grid">
+                    <flux:navlist.item icon="light-bulb" :href="route('lecturer.topics.index')"
+                        :current="request()->routeIs('lecturer.topics.*')" wire:navigate>{{ __('My Topics') }}
+                    </flux:navlist.item>
+                </flux:navlist.group>
+            @endcan
+
+            <flux:navlist.group :heading="__('Schedules')" class="grid">
+                <flux:navlist.item icon="calendar" :href="route('lecturer.schedules.availability')"
+                    :current="request()->routeIs('lecturer.schedules.*')" wire:navigate>{{ __('My Availability') }}
                 </flux:navlist.item>
             </flux:navlist.group>
 
-            <flux:navlist.group :heading="__('Scheduling')" class="grid">
-                <flux:navlist.item icon="calendar-days" :href="route('lecturer.schedules.availability')"
-                    :current="request()->routeIs('lecturer.schedules.*')" wire:navigate>{{ __('Schedules') }}
-                </flux:navlist.item>
-            </flux:navlist.group>
-
-            @can('manage-roles')
+            @can('administrate')
                 <flux:navlist.group :heading="__('Administration')" class="grid">
                     <flux:navlist.item icon="shield-check" :href="route('lecturer.roles.index')"
                         :current="request()->routeIs('lecturer.roles.*')" wire:navigate>{{ __('Roles & Permissions') }}

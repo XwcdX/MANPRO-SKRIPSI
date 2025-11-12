@@ -30,54 +30,20 @@ Route::middleware(['auth:student', 'verified'])->name('student.')->group(functio
 
 Route::prefix('lecturer')->name('lecturer.')->middleware(['auth:lecturer', 'verified'])->group(function () {
     Volt::route('dashboard', 'lecturer.dashboard')->name('dashboard');
-    Route::middleware('permission:view-students,lecturer')->group(function () {
-        Volt::route('students', 'lecturer.students.index')->name('students.index');
-        Volt::route('students/{student}', 'lecturer.students.show')->name('students.show');
+    
+    Route::middleware('permission:offer-topics,lecturer')->group(function () {
+        Volt::route('topics', 'lecturer.topics.index')->name('topics.index');
     });
 
-    Route::middleware('permission:edit-student-status,lecturer')->group(function () {
-        Volt::route('supervisions', 'lecturer.supervisions.index')->name('supervisions.index');
-        Volt::route('supervisions/{student}/evaluate', 'lecturer.supervisions.evaluate')->name('supervisions.evaluate');
-    });
+    Volt::route('schedules/availability', 'lecturer.schedules.availability')->name('schedules.availability');
 
-    Route::middleware('permission:approve-thesis-title,lecturer')->group(function () {
-        Volt::route('thesis/titles', 'lecturer.thesis.titles')->name('thesis.titles');
-        Volt::route('thesis/titles/{student}/review', 'lecturer.thesis.review-title')->name('thesis.review-title');
-    });
-
-    Route::middleware('permission:set-availability,lecturer')->group(function () {
-        Volt::route('schedules/availability', 'lecturer.schedules.availability')->name('schedules.availability');
-    });
-
-    Route::middleware('permission:manage-schedules,lecturer')->group(function () {
-        Volt::route('schedules/manage', 'lecturer.schedules.manage')->name('schedules.manage');
-    });
-
-    Route::middleware('permission:schedule-presentation,lecturer')->group(function () {
-        Volt::route('presentations', 'lecturer.presentations.index')->name('presentations.index');
-        Volt::route('presentations/schedule', 'lecturer.presentations.schedule')->name('presentations.schedule');
-    });
-
-    Route::middleware('permission:manage-division,lecturer')->group(function () {
-        Volt::route('division/overview', 'lecturer.division.overview')->name('division.overview');
-        Volt::route('division/lecturers', 'lecturer.division.lecturers')->name('division.lecturers');
-        Volt::route('division/students', 'lecturer.division.students')->name('division.students');
-    });
-
-    Route::middleware('permission:view-system-reports,lecturer')->group(function () {
-        Volt::route('reports/system', 'lecturer.reports.system')->name('reports.system');
-        Volt::route('reports/analytics', 'lecturer.reports.analytics')->name('reports.analytics');
-    });
-
-    Route::middleware('permission:manage-roles,lecturer')->group(function () {
+    Route::middleware('permission:administrate,lecturer')->group(function () {
         Volt::route('roles', 'lecturer.roles.index')->name('roles.index');
-
         Volt::route('management', 'lecturer.lecturers.index')->name('lecturers.index');
-
         Volt::route('roles/management', 'lecturer.assignments.index')->name('assignments.index');
         Volt::route('{lecturer}/roles', 'lecturer.assignments.edit')->name('assignments.edit');
-
         Volt::route('periods', 'lecturer.periods.index')->name('periods.index');
+        Volt::route('periods/{period}/quotas', 'lecturer.periods.manage-quotas')->name('periods.manage-quotas');
     });
 
     Volt::route('profile', 'lecturer.profile')->name('profile');

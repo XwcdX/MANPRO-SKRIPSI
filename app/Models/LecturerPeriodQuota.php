@@ -4,31 +4,27 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Concerns\HasUuids;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
-class LecturerTopic extends Model
+class LecturerPeriodQuota extends Model
 {
     use HasUuids;
-
     protected $fillable = [
         'lecturer_id',
         'period_id',
-        'topic',
-        'description',
-        'student_quota',
-        'is_available',
+        'max_students',
     ];
 
     protected $casts = [
-        'is_available' => 'boolean',
-        'student_quota' => 'integer',
+        'max_students' => 'integer',
     ];
 
-    public function lecturer()
+    public function lecturer(): BelongsTo
     {
         return $this->belongsTo(Lecturer::class);
     }
 
-    public function period()
+    public function period(): BelongsTo
     {
         return $this->belongsTo(Period::class);
     }

@@ -15,18 +15,27 @@ return new class extends Migration {
             $table->string('name')->unique()->comment('e.g., Odd 2025/2026, Even 2025/2026');
             $table->date('start_date');
             $table->date('end_date');
-            $table->date('registration_start')->comment('When students can start registering');
-            $table->date('registration_end')->comment('Last day for registration');
-            $table->date('supervision_selection_deadline')->nullable()->comment('Deadline for selecting supervisors');
-            $table->date('title_submission_deadline')->nullable()->comment('Deadline for submitting thesis titles');
-            $table->boolean('is_active')->default(false)->comment('Indicates the current registration period');
-            $table->enum('status', ['upcoming', 'registration_open', 'in_progress', 'completed', 'archived'])
-                ->default('upcoming');
-            $table->unsignedInteger('max_students')->nullable()->comment('Maximum students allowed in this period');
+            $table->date('registration_end');
+            $table->date('proposal_hearing_start')->nullable();
+            $table->date('proposal_hearing_end')->nullable();
+            $table->date('thesis_start')->nullable();
+            $table->date('thesis_end')->nullable();
+            $table->enum('status', [
+                'upcoming',
+                'registration_open',
+                'proposal_in_progress',
+                'proposal_hearing',
+                'thesis_in_progress',
+                'thesis',
+                'completed',
+                'archived'
+            ])->default('upcoming');
+            $table->unsignedInteger('default_quota')->default(12);
+            $table->timestamp('archived_at')->nullable();
             $table->timestamps();
 
-            $table->index('status', 'idx_periods_status');
-            $table->index('is_active', 'idx_periods_active');
+            $table->index('status');
+            $table->index('archived_at');
         });
     }
 

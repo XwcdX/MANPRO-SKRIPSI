@@ -69,11 +69,7 @@ class Lecturer extends Authenticatable implements MustVerifyEmail
             ->wherePivot('status', 'active');
     }
 
-    public function schedules()
-    {
-        return $this->belongsToMany(Schedule::class, 'lecturer_schedules')
-            ->withPivot(['status', 'notes']);
-    }
+
 
     public function getTitleTextAttribute()
     {
@@ -108,5 +104,35 @@ class Lecturer extends Authenticatable implements MustVerifyEmail
         $maxStudents = (int) setting('max_students_per_supervisor', 12);
         $capacity = $maxStudents - $this->activeSupervisions()->count();
         return $capacity > 0 ? $capacity : 0;
+    }
+
+    public function lecturerQuotas()
+    {
+        return $this->hasMany(LecturerPeriodQuota::class);
+    }
+
+    public function topics()
+    {
+        return $this->hasMany(LecturerTopic::class);
+    }
+
+    public function getAvailableCapacityForPeriod($periodId)
+    {
+        $period = Period::find($periodId);
+        if (!$period) return 0;
+
+        $maxStudents = $period->getLecturerQuota($this);
+        $currentStudents = $this->activeSupervisions()
+            ->whereHas('periods', function($q) use ($periodId) {
+                $q->where('periods.id', $periodId);
+            })->count();
+        
+        $capacity = $maxStudents - $currentStudents;
+        return $capacity > 0 ? $capacity : 0;
+    }
+
+    public function isAtCapacityForPeriod($periodId)
+    {
+        return $this->getAvailableCapacityForPeriod($periodId) <= 0;
     }
 }

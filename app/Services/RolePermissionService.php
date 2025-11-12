@@ -40,6 +40,11 @@ class RolePermissionService
         return $role->delete();
     }
 
+    public function renameRole(Role $role, string $newName): bool
+    {
+        return $role->update(['name' => $newName]);
+    }
+
     public function getAllPermissions(): Collection
     {
         return Permission::where('guard_name', $this->guardName)->get();
