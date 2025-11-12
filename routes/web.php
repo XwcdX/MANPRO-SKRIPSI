@@ -12,7 +12,11 @@ Route::middleware('guest:student,lecturer')->group(function () {
 });
 
 Route::middleware(['auth:student', 'verified'])->name('student.')->group(function () {
-    Volt::route('dashboard', 'student.dashboard')->name('dashboard');
+    Route::middleware(['have_period'])->group(function () {
+        Volt::route('dashboard', 'student.dashboard')->name('dashboard');
+    });
+
+    Volt::route('apply-period', 'student.apply-period')->name('apply-period');
 
     Volt::route('thesis/submit-title', 'student.thesis.submit-title')->name('thesis.submit-title');
     Volt::route('thesis/status', 'student.thesis.status')->name('thesis.status');

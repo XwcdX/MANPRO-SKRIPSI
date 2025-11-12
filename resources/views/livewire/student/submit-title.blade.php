@@ -18,7 +18,7 @@ new class extends Component {
         $this->user = $user;
         $this->status = $user->status ?? 0;
         $this->title = $this->status > 0 ? $user->thesis_title : '';
-        $this->description = $this->status > 0 ? $user->thesis_description : '';
+        $this->description = $this->status > 0 ? $user->thesis_description ?? '' : '';
     }
 
     public function submit(SubmissionService $service)
