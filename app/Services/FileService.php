@@ -2,8 +2,9 @@
 
 namespace App\Services;
 
-use Illuminate\Support\Facades\Storage;
+use App\Models\Student;
 use Illuminate\Http\UploadedFile;
+use Illuminate\Support\Facades\Storage;
 
 class FileService
 {
@@ -16,8 +17,15 @@ class FileService
      * @param string $disk public or local
      * @return string $filePath
      */
-    public function upload(UploadedFile $file, string $path, string $filename, string $disk = 'public'): string
+    public function upload(UploadedFile $file, string $path, Student $student, string $disk = 'public'): string
     {
+        // Ambil ekstensi file
+        $extension = $file->getClientOriginalExtension();
+
+        // Buat nama file custom: studentID_timestamp.ext
+        $filename = $student->name . '_proposal_' . time() . '.' . $extension;
+
+        // Simpan file
         $filePath = $file->storeAs($path, $filename, $disk);
 
         return $filePath;

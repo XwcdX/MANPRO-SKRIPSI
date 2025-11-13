@@ -4,55 +4,110 @@ use App\Traits\WithAuthUser;
 use Livewire\Volt\Component;
 use Livewire\Attributes\Layout;
 use App\Services\SubmissionService;
+use App\Services\CrudService;
+use Livewire\WithFileUploads;
+use Illuminate\Http\UploadedFile;
+use Illuminate\Support\Facades\Storage;
 
 new class extends Component {
-    use WithAuthUser;
+    use WithAuthUser, WithFileUploads;
 
-    public string $title = '';
     public string $description = '';
-    public ?int $status = null;
-    public $user;
+    public $proposal_file;
+    public array $history = [];
 
-    public function mount($user)
+    public function mount()
     {
-        $this->user = $user;
-        $this->status = $user->status ?? 0;
-        $this->title = $this->status > 0 ? $user->thesis_title : '';
-        $this->description = $this->status > 0 ? $user->thesis_description : '';
+        $this->user->load(['history_proposals']);
+        $this->history = $this->user->history_proposals->map(function ($h) {
+            $statusText = match ($h->status) {
+                0 => 'Pending',
+                1 => 'Revision',
+                2 => 'Acc Supervisor',
+                3 => 'Acc Kabid',
+                default => 'Unknown',
+            };
+
+            return [
+                'id' => $h->id,
+                'description' => $h->description,
+                'file_path' => $h->file_path,
+                'comment' => $h->comment,
+                'status' => $statusText,
+                'created_at' => $h->created_at->format('Y-m-d H:i:s'),
+            ];
+        })->toArray();
     }
 
     public function submit(SubmissionService $service)
     {
-        // pastikan usernya ada dan guard aktif
+        // log awal
+        Log::info('Memulai proses submit proposal.');
+
+        // pastikan user terautentikasi
         if (! $this->user) {
+            Log::warning('Submit proposal gagal: user tidak ditemukan.');
             $this->dispatch('notify', type: 'error', message: 'User tidak ditemukan.');
             return;
         }
 
-        // panggil service
-        $success = $service->submitTitle($this->user->id, $this->title, $this->description);
+        Log::info('User terdeteksi.', ['user_id' => $this->user->id]);
 
-        if ($success) {
-            $this->status = 1;
-            $this->dispatch('student-status-updated', status: 1);
-            $this->dispatch('notify', type: 'success', message: 'Judul berhasil disubmit.');
-        } else {
-            $this->dispatch('notify', type: 'error', message: 'Judul tidak valid atau sudah dipakai.');
+        // validasi input
+        try {
+            $this->validate([
+                'description' => 'required|string',
+                'proposal_file' => 'required|file|mimes:pdf,doc,docx|max:2048',
+            ]);
+            Log::info('Validasi input berhasil.');
+        } catch (\Illuminate\Validation\ValidationException $e) {
+            Log::error('Validasi gagal.', ['errors' => $e->errors()]);
+            $this->dispatch('notify', type: 'error', message: 'Validasi gagal, periksa input Anda.');
+            return;
+        }
+
+        // pastikan file berupa UploadedFile
+        if (! $this->proposal_file instanceof UploadedFile) {
+            Log::error('Objek file tidak valid.', ['type' => gettype($this->proposal_file)]);
+            $this->dispatch('notify', type: 'error', message: 'File tidak valid.');
+            return;
+        }
+
+        Log::info('File diterima.', [
+            'nama_asli' => $this->proposal_file->getClientOriginalName(),
+            'ukuran' => $this->proposal_file->getSize(),
+            'tipe' => $this->proposal_file->getMimeType(),
+        ]);
+
+        try {
+            // simpan submission
+            $success = $service->submitProposal(
+                $this->user,
+                $this->proposal_file,
+                $this->description,
+            );
+
+            if ($success) {
+                Log::info('Proposal berhasil disubmit.', ['user_id' => $this->user->id]);
+                $this->dispatch('notify', type: 'success', message: 'Proposal berhasil disubmit.');
+                $this->reset(['description', 'proposal_file']);
+                $this->mount();
+            } else {
+                Log::warning('Submit proposal gagal disimpan di service.', ['user_id' => $this->user->id]);
+                $this->dispatch('notify', type: 'error', message: 'Gagal menyimpan proposal.');
+            }
+
+        } catch (\Throwable $e) {
+            Log::error('Terjadi kesalahan saat submit proposal.', [
+                'user_id' => $this->user->id,
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString(),
+            ]);
+
+            $this->dispatch('notify', type: 'error', message: 'Terjadi kesalahan saat mengirim proposal.');
         }
     }
 };
-
-$steps = ['Judul', 'Pilih Dosbing', 'Upload Proposal', 'Sidang Proposal', 'Final Proposal', 'Upload Skripsi', 'Sidang Skripsi', 'Final Skripsi'];
-    $currentStepIndex = 2; // Tahap aktif: 'Upload Proposal'
-    
-    $history = [
-        ['tanggal' => '1 Agustus 2024', 'revisi' => 1, 'penjelasan' => 'kurang rinci di bagian latar belakang', 'dokumen' => 1, 'acc' => 'Dosbing Kabid'],
-        ['tanggal' => '8 Agustus 2024', 'revisi' => 2, 'penjelasan' => 'sumber kurang terpercaya', 'dokumen' => 2, 'acc' => 'Dosbing Kabid'],
-        ['tanggal' => '15 Agustus 2024', 'revisi' => 3, 'penjelasan' => 'banyaknya typo', 'dokumen' => 3, 'acc' => 'Dosbing Kabid'],
-        ['tanggal' => '22 Agustus 2024', 'revisi' => 4, 'penjelasan' => 'dalam analisis kurang jelas', 'dokumen' => 4, 'acc' => 'Dosbing Kabid'],
-        ['tanggal' => '29 Agustus 2024', 'revisi' => 5, 'penjelasan' => 'metode yang digunakan kurang efisien', 'dokumen' => 5, 'acc' => 'Dosbing Kabid'],
-    ];
-    // TIDAK PERLU Carbon::setLocale('id') lagi
 ?>
 
 <div>
@@ -60,19 +115,8 @@ $steps = ['Judul', 'Pilih Dosbing', 'Upload Proposal', 'Sidang Proposal', 'Final
         Upload Proposal
     </h5>
 
-    <form action="action_url" method="POST" enctype="multipart/form-data">
-        @php
-            $steps = ['Judul', 'Pilih Dosbing', 'Upload Proposal', 'Sidang Proposal', 'Final Proposal', 'Upload Skripsi', 'Sidang Skripsi', 'Final Skripsi'];
-            $currentStepIndex = 2;
-
-            $history = [
-                ['tanggal' => '1 Agustus 2024', 'revisi' => 1, 'penjelasan' => 'kurang rinci di bagian latar belakang', 'dokumen' => 1, 'acc' => 'Dosbing Kabid'],
-                ['tanggal' => '8 Agustus 2024', 'revisi' => 2, 'penjelasan' => 'sumber kurang terpercaya', 'dokumen' => 2, 'acc' => 'Dosbing Kabid'],
-                ['tanggal' => '15 Agustus 2024', 'revisi' => 3, 'penjelasan' => 'banyaknya typo', 'dokumen' => 3, 'acc' => 'Dosbing Kabid'],
-                ['tanggal' => '22 Agustus 2024', 'revisi' => 4, 'penjelasan' => 'dalam analisis kurang jelas', 'dokumen' => 4, 'acc' => 'Dosbing Kabid'],
-                ['tanggal' => '29 Agustus 2024', 'revisi' => 5, 'penjelasan' => 'metode yang digunakan kurang efisien', 'dokumen' => 5, 'acc' => 'Dosbing Kabid'],
-            ];
-        @endphp
+    <form wire:submit.prevent="submit" enctype="multipart/form-data">
+        
         @csrf
 
         <div class="space-y-6 max-w-3xl mx-auto pt-8">
@@ -82,7 +126,7 @@ $steps = ['Judul', 'Pilih Dosbing', 'Upload Proposal', 'Sidang Proposal', 'Final
                 <label for="jurusan_desktop" class="w-full sm:w-32 text-sm font-medium text-gray-700 mb-2 sm:mb-0 sm:pt-2.5">
                     Rincian Proposal
                 </label>
-                <textarea id="jurusan_desktop" name="jurusan" rows="3"
+                <textarea wire:model.defer="description" id="jurusan_desktop" name="jurusan" rows="3"
                     class="flex-grow bg-gray-50 border border-gray-300 text-sm rounded-lg p-2.5 w-full"
                     placeholder="latar belakang, perumusan masalah, tujuan, ruang lingkup, teori"></textarea>
             </div>
@@ -94,14 +138,19 @@ $steps = ['Judul', 'Pilih Dosbing', 'Upload Proposal', 'Sidang Proposal', 'Final
                 </label>
 
                 <div class="flex flex-col sm:flex-row sm:items-center w-full sm:space-x-3 space-y-3 sm:space-y-0">
-                    <input
+                    <input wire:model="proposal_file"
                         class="block w-full text-sm text-gray-900 border border-gray-300 rounded-lg cursor-pointer bg-gray-50 focus:outline-none file:mr-4 file:py-2 file:px-4 file:rounded-l-lg file:border-0 file:text-sm file:font-semibold file:bg-gray-200 file:text-gray-700 hover:file:bg-gray-300"
                         id="file_input_desktop" name="proposal_file" type="file">
 
                     <!-- Tombol pindah ke bawah di mobile -->
                     <button type="submit"
-                        class="w-full sm:w-auto px-8 py-2 bg-gray-700 text-white font-medium rounded-lg hover:bg-gray-800 transition duration-200">
-                        Submit
+                        wire:loading.attr="disabled"
+                        wire:target="proposal_file,submit"
+                        class="w-full sm:w-auto px-8 py-2 bg-gray-700 text-white font-medium rounded-lg hover:bg-gray-800 transition duration-200 disabled:opacity-60 disabled:cursor-not-allowed">
+                        <!-- Normal (idle) -->
+                        <span>
+                            Submit
+                        </span>
                     </button>
                 </div>
             </div>
@@ -117,21 +166,25 @@ $steps = ['Judul', 'Pilih Dosbing', 'Upload Proposal', 'Sidang Proposal', 'Final
                 <thead class="text-xs text-gray-700 uppercase bg-gray-100">
                     <tr>
                         <th scope="col" class="px-6 py-3">Tanggal</th>
-                        <th scope="col" class="px-6 py-3">Revisi ke-</th>
-                        <th scope="col" class="px-6 py-3">Penjelasan</th>
+                        <th scope="col" class="px-6 py-3">Deskripsi</th>
                         <th scope="col" class="px-6 py-3">Dokumen</th>
+                        <th scope="col" class="px-6 py-3">Komentar</th>
                         <th scope="col" class="px-6 py-3">ACC</th>
                     </tr>
                 </thead>
                 <tbody>
                     @foreach ($history as $item)
                         <tr class="bg-white border-b hover:bg-gray-50">
-                            <td class="px-6 py-4 whitespace-nowrap">{{ $item['tanggal'] }}</td>
-                            <td class="px-6 py-4 whitespace-nowrap">{{ $item['revisi'] }}</td>
-                            <td class="px-6 py-4">{{ $item['penjelasan'] }}</td>
+                            <td class="px-6 py-4 whitespace-nowrap">{{ $item['created_at'] }}</td>
+                            <td class="px-6 py-4">{{ $item['description'] }}</td>
                             <td class="px-6 py-4 whitespace-nowrap text-blue-600 hover:text-blue-800 cursor-pointer">
-                                {{ $item['dokumen'] }}</td>
-                            <td class="px-6 py-4 whitespace-nowrap font-semibold">{{ $item['acc'] }}</td>
+                                <a href="{{ Storage::url($item['file_path']) }}" 
+                                target="_blank" 
+                                class="text-blue-600 hover:text-blue-800">
+                                Lihat File
+                            </a></td>
+                            <td class="px-6 py-4 whitespace-nowrap">{{ $item['comment'] }}</td>
+                            <td class="px-6 py-4 whitespace-nowrap font-semibold">{{ $item['status'] }}</td>
                         </tr>
                     @endforeach
                 </tbody>

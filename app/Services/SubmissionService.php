@@ -4,6 +4,7 @@ namespace App\Services;
 
 use App\Models\Period;
 use App\Models\Student;
+use App\Models\HistoryProposal;
 use App\Models\Lecturer;
 use Illuminate\Http\UploadedFile;
 use App\Models\SupervisionApplication;
@@ -25,11 +26,16 @@ class SubmissionService
      * @param string $studentId Student's Id or User Id
      * @param UploadedFile $file
      */
-    public function submitProposal(string $studentId, UploadedFile $file)
+    public function submitProposal(Student $student, UploadedFile $file, string $description)
     {
-        $path = $this->fileService->upload($file, 'proposal', $studentId, "local");
+        $path = $this->fileService->upload($file, 'proposal', $student, "public");
+        $this->crud->setModel(new HistoryProposal())->create([
+            'student_id' => $student->id,
+            'description' => $description,
+            'file_path' => $path
+        ]);
         // tambahan logika lain harusnya seperti next step sama notify dosen
-        return $path;
+        return true;
     }
 
     /**
