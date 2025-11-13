@@ -16,37 +16,43 @@ class LecturersImport implements ToCollection, WithHeadingRow, WithValidation
     public function collection(Collection $rows)
     {
         foreach ($rows as $row) {
-            $lecturer = Lecturer::firstOrCreate(
-                ['email' => $row['email']],
-                [
-                    'name' => $row['name'],
-                    'password' => isset($row['password']) ? Hash::make($row['password']) : Hash::make('password')
-                ]
-            );
-
-            if ($lecturer->wasRecentlyCreated === false) {
-                $lecturer->name = $row['name'];
+            $lecturer = Lecturer::firstOrNew(['email' => $row['email']]);
+            
+            $lecturer->name = $row['name'];
+            
+            if (!empty($row['password'])) {
+                $lecturer->password = Hash::make($row['password']);
+            } elseif (!$lecturer->exists) {
+                $emailUsername = explode('@', $row['email'])[0];
+                $lecturer->password = Hash::make($emailUsername . 'password');
             }
             
-            if (!empty($row['division'])) {
-                $division = Division::where('name', $row['division'])->first();
-                $lecturer->division_id = $division->id ?? null;
-            } else {
-                $lecturer->division_id = null;
-            }
-
             $lecturer->save();
-
-            $roleName = $row['role'] ?? 'Supervisor';
-            $role = Role::where('name', $roleName)->where('guard_name', 'lecturer')->first();
             
-            if (!$role) {
-                $role = Role::where('name', 'Supervisor')->where('guard_name', 'lecturer')->first();
+            // Handle multiple divisions
+            if (!empty($row['division'])) {
+                $divisionNames = array_map('trim', explode(',', $row['division']));
+                $divisionIds = Division::whereIn('name', $divisionNames)->pluck('id')->toArray();
+                $lecturer->divisions()->sync($divisionIds);
+            } else {
+                $lecturer->divisions()->sync([]);
             }
 
-            if ($role) {
-                $lecturer->syncRoles([$role->name]);
+            $roleNames = !empty($row['role']) ? array_map('trim', explode(',', $row['role'])) : ['Supervisor'];
+            $validRoles = [];
+            
+            foreach ($roleNames as $roleName) {
+                $role = Role::where('name', $roleName)->where('guard_name', 'lecturer')->first();
+                if ($role) {
+                    $validRoles[] = $role->name;
+                }
             }
+            
+            if (empty($validRoles)) {
+                $validRoles = ['Supervisor'];
+            }
+
+            $lecturer->syncRoles($validRoles);
         }
     }
 

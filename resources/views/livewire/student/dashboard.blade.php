@@ -137,7 +137,7 @@ new class extends Component {
                                 @elseif($index < $studentStatus)
                                     <p>Tahap **{{ $step }}** telah diselesaikan.</p>
                                 @else
-                                    <p>Menunggu tahap **{{ $steps[$studentStatus] }}** selesai.</p>
+                                    <p>Menunggu tahap **{{ is_int($studentStatus) && isset($steps[$studentStatus]) ? $steps[$studentStatus] : 'sebelumnya' }}** selesai.</p>
                                 @endif
                                 
                             </div>

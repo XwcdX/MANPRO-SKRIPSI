@@ -87,7 +87,7 @@ new #[Layout('components.layouts.lecturer')] class extends Component {
                                 </td>
                                 <td class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
                                     <a href="{{ route('lecturer.assignments.edit', $lecturer) }}" class="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500" wire:navigate>
-                                        Manage Roles
+                                        Assign Roles
                                     </a>
                                 </td>
                             </tr>

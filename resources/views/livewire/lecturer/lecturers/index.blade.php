@@ -11,6 +11,7 @@ use Maatwebsite\Excel\Facades\Excel;
 use App\Imports\LecturersImport;
 use App\Exports\LecturersExport;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\Rule;
 use Illuminate\Validation\Rules\Password;
 
@@ -21,14 +22,19 @@ class extends Component {
     public $divisions = [];
     public bool $showModal = false;
     public bool $showImportModal = false;
+    public bool $showDeleteModal = false;
     public string $search = '';
+    public string $filterDivision = '';
+    public string $filterRole = '';
+    public ?string $deletingId = null;
 
     public ?Lecturer $editing = null;
 
     public string $name = '';
     public string $email = '';
     public int $title = 0;
-    public ?string $division_id = null;
+    public ?string $primary_division_id = null;
+    public array $selected_divisions = [];
     public bool $is_active = true;
     public string $password = '';
     public string $password_confirmation = '';
@@ -52,13 +58,31 @@ class extends Component {
         $this->resetPage();
     }
 
+    public function updatingFilterDivision(): void
+    {
+        $this->resetPage();
+    }
+
+    public function updatingFilterRole(): void
+    {
+        $this->resetPage();
+    }
+
+    public function clearFilters(): void
+    {
+        $this->reset(['search', 'filterDivision', 'filterRole']);
+        $this->resetPage();
+    }
+
     protected function rules()
     {
         $rules = [
             'name' => 'required|string|max:100',
             'email' => ['required', 'email', 'max:100'],
             'title' => 'required|integer|in:0,1,2,3',
-            'division_id' => 'nullable|uuid|exists:divisions,id',
+            'primary_division_id' => 'nullable|uuid|exists:divisions,id',
+            'selected_divisions' => 'nullable|array',
+            'selected_divisions.*' => 'uuid|exists:divisions,id',
             'is_active' => 'required|boolean',
             'password' => ['confirmed'],
         ];
@@ -77,13 +101,30 @@ class extends Component {
 
     public function with(): array
     {
+        $query = Lecturer::with(['divisions', 'primaryDivision', 'roles']);
+
+        if ($this->search) {
+            $query->where(function($q) {
+                $q->where('name', 'like', '%' . $this->search . '%')
+                  ->orWhere('email', 'like', '%' . $this->search . '%');
+            });
+        }
+
+        if ($this->filterDivision) {
+            $query->whereHas('divisions', function($q) {
+                $q->where('divisions.id', $this->filterDivision);
+            });
+        }
+
+        if ($this->filterRole) {
+            $query->whereHas('roles', function($q) {
+                $q->where('name', $this->filterRole);
+            });
+        }
+
         return [
-            'lecturers' => Lecturer::with(['division', 'roles'])
-                ->where(function($query) {
-                    $query->where('name', 'like', '%' . $this->search . '%')
-                          ->orWhere('email', 'like', '%' . $this->search . '%');
-                })
-                ->paginate(15),
+            'lecturers' => $query->paginate(15),
+            'roles' => DB::table('roles')->where('guard_name', 'lecturer')->pluck('name'),
         ];
     }
 
@@ -94,7 +135,8 @@ class extends Component {
         $this->name = '';
         $this->email = '';
         $this->title = 0;
-        $this->division_id = null;
+        $this->primary_division_id = null;
+        $this->selected_divisions = [];
         $this->is_active = true;
         $this->showModal = true;
     }
@@ -106,7 +148,8 @@ class extends Component {
         $this->name = $lecturer->name;
         $this->email = $lecturer->email;
         $this->title = $lecturer->title;
-        $this->division_id = $lecturer->division_id;
+        $this->primary_division_id = $lecturer->primary_division_id;
+        $this->selected_divisions = $lecturer->divisions->pluck('id')->toArray();
         $this->is_active = $lecturer->is_active;
         $this->showModal = true;
     }
@@ -122,7 +165,7 @@ class extends Component {
         $this->editing->name = $this->name;
         $this->editing->email = $this->email;
         $this->editing->title = $this->title;
-        $this->editing->division_id = $this->division_id ?: null;
+        $this->editing->primary_division_id = $this->primary_division_id ?: null;
         $this->editing->is_active = $this->is_active;
 
         if (!empty($this->password)) {
@@ -130,6 +173,9 @@ class extends Component {
         }
 
         $this->editing->save();
+        
+        // Sync divisions
+        $this->editing->divisions()->sync($this->selected_divisions);
 
         session()->flash('success', 'Lecturer saved successfully.');
         $this->showModal = false;
@@ -164,16 +210,27 @@ class extends Component {
         return Excel::download(new LecturersExport(), 'lecturers-' . now()->timestamp . '.xlsx');
     }
 
-    public function deleteLecturer(Lecturer $lecturer): void
+    public function confirmDelete(string $id): void
     {
-        $lecturer->delete();
-        session()->flash('success', 'Lecturer deleted successfully.');
+        $this->deletingId = $id;
+        $this->showDeleteModal = true;
+    }
+
+    public function deleteLecturer(): void
+    {
+        $lecturer = Lecturer::find($this->deletingId);
+        if ($lecturer) {
+            $lecturer->delete();
+            session()->flash('success', 'Lecturer deleted successfully.');
+        }
+        $this->showDeleteModal = false;
+        $this->deletingId = null;
     }
 
     private function resetInput(): void
     {
         $this->resetErrorBag();
-        $this->reset('password', 'password_confirmation', 'upload', 'name', 'email', 'title', 'division_id', 'is_active');
+        $this->reset('password', 'password_confirmation', 'upload', 'name', 'email', 'title', 'primary_division_id', 'selected_divisions', 'is_active');
     }
 };
 
@@ -203,12 +260,31 @@ class extends Component {
                 </div>
             </div>
 
-            <div class="mb-6">
-                <div class="w-full sm:w-1/3">
-                    <input wire:model.live.debounce.300ms="search" type="text"
-                        placeholder="Search by name or email..."
-                        class="w-full px-4 py-2 rounded-lg border border-zinc-300 dark:border-zinc-600 bg-white dark:bg-zinc-800 text-black dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500">
-                </div>
+            <div class="mb-6 grid grid-cols-1 sm:grid-cols-4 gap-4">
+                <input wire:model.live.debounce.300ms="search" type="text"
+                    placeholder="Search by name or email..."
+                    class="px-4 py-2 rounded-lg border border-zinc-300 dark:border-zinc-600 bg-white dark:bg-zinc-800 text-black dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500">
+                
+                <select wire:model.live="filterDivision"
+                    class="px-4 py-2 rounded-lg border border-zinc-300 dark:border-zinc-600 bg-white dark:bg-zinc-800 text-black dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500">
+                    <option value="">All Divisions</option>
+                    @foreach ($divisions as $division)
+                        <option value="{{ $division->id }}">{{ $division->name }}</option>
+                    @endforeach
+                </select>
+
+                <select wire:model.live="filterRole"
+                    class="px-4 py-2 rounded-lg border border-zinc-300 dark:border-zinc-600 bg-white dark:bg-zinc-800 text-black dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500">
+                    <option value="">All Roles</option>
+                    @foreach ($roles as $role)
+                        <option value="{{ $role }}">{{ $role }}</option>
+                    @endforeach
+                </select>
+
+                <button wire:click="clearFilters"
+                    class="px-4 py-2 rounded-lg border border-zinc-300 dark:border-zinc-600 bg-white dark:bg-zinc-800 text-black dark:text-white hover:bg-zinc-50 dark:hover:bg-zinc-700 cursor-pointer">
+                    Clear Filters
+                </button>
             </div>
 
             <hr class="border-t border-zinc-200 dark:border-zinc-700 mb-6">
@@ -251,19 +327,21 @@ class extends Component {
                                     {{ $lecturer->email }}
                                 </td>
                                 <td class="px-6 py-4 text-sm text-zinc-500 dark:text-zinc-400">
-                                    <div class="flex flex-wrap gap-1">
+                                    <div class="flex flex-wrap gap-1.5 items-center">
                                         @forelse($lecturer->roles as $role)
-                                            <span
-                                                class="px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200">
+                                            <span class="px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200">
                                                 {{ $role->name }}
                                             </span>
                                         @empty
                                             <span class="text-zinc-400 italic">No roles assigned</span>
                                         @endforelse
-                                        @if ($lecturer->division)
-                                            <span class="text-xs text-zinc-500 dark:text-zinc-400">
-                                                {{ $lecturer->division->name }}
-                                            </span>
+                                        @if ($lecturer->divisions->isNotEmpty())
+                                            <span class="text-zinc-400 dark:text-zinc-500 mx-1">•</span>
+                                            @foreach($lecturer->divisions as $division)
+                                                <span class="px-2 py-0.5 rounded text-xs {{ $lecturer->primary_division_id === $division->id ? 'bg-amber-100 text-amber-800 dark:bg-amber-900 dark:text-amber-200' : 'bg-zinc-100 text-zinc-700 dark:bg-zinc-700 dark:text-zinc-300' }}">
+                                                    @if($lecturer->primary_division_id === $division->id)⭐ @endif{{ $division->name }}
+                                                </span>
+                                            @endforeach
                                         @endif
                                     </div>
                                 </td>
@@ -282,8 +360,7 @@ class extends Component {
                                             size="sm" class="cursor-pointer">
                                             Edit
                                         </flux:button>
-                                        <flux:button wire:click="deleteLecturer('{{ $lecturer->id }}')"
-                                            wire:confirm="Are you sure you want to delete this lecturer?"
+                                        <flux:button wire:click="confirmDelete('{{ $lecturer->id }}')"
                                             variant="danger" size="sm" class="cursor-pointer">
                                             Delete
                                         </flux:button>
@@ -322,8 +399,23 @@ class extends Component {
 
                     <flux:input wire:model="email" type="email" label="Email" required />
 
-                    <flux:select wire:model="division_id" label="Division">
-                        <option value="">Select a Division (optional)</option>
+                    <div>
+                        <flux:label>Divisions (Specializations)</flux:label>
+                        <div class="mt-2 space-y-2 max-h-48 overflow-y-auto border border-zinc-300 dark:border-zinc-600 rounded-lg p-3">
+                            @foreach ($divisions as $division)
+                                <label class="flex items-center gap-2 cursor-pointer hover:bg-zinc-50 dark:hover:bg-zinc-800 p-2 rounded">
+                                    <input type="checkbox" wire:model="selected_divisions" value="{{ $division->id }}" class="rounded cursor-pointer">
+                                    <span class="text-sm text-zinc-700 dark:text-zinc-300">{{ $division->name }}</span>
+                                </label>
+                            @endforeach
+                        </div>
+                        @error('selected_divisions')
+                            <span class="text-red-500 text-xs mt-1 block">{{ $message }}</span>
+                        @enderror
+                    </div>
+
+                    <flux:select wire:model="primary_division_id" label="Primary Division (Head of)">
+                        <option value="">None - Not a division head</option>
                         @foreach ($divisions as $division)
                             <option value="{{ $division->id }}">{{ $division->name }}</option>
                         @endforeach
@@ -390,6 +482,30 @@ class extends Component {
                     </flux:button>
                 </div>
             </form>
+        </flux:modal>
+    @endif
+
+    @if($showDeleteModal)
+        <flux:modal name="delete-modal" wire:model="showDeleteModal" class="max-w-md">
+            <div class="space-y-6">
+                <div>
+                    <flux:heading size="lg">Confirm Deletion</flux:heading>
+                </div>
+                
+                <p class="text-zinc-600 dark:text-zinc-400">
+                    Are you sure you want to delete this lecturer? This action cannot be undone.
+                </p>
+
+                <div class="flex gap-2">
+                    <flux:spacer />
+                    <flux:button type="button" variant="ghost" wire:click="$set('showDeleteModal', false)" class="cursor-pointer">
+                        Cancel
+                    </flux:button>
+                    <flux:button wire:click="deleteLecturer" variant="danger" class="cursor-pointer">
+                        Delete
+                    </flux:button>
+                </div>
+            </div>
         </flux:modal>
     @endif
 </div>

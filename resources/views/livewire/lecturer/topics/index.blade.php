@@ -4,7 +4,7 @@ use Livewire\Attributes\Layout;
 use Livewire\Volt\Component;
 use Livewire\WithPagination;
 use App\Models\LecturerTopic;
-use App\Models\Period;
+use App\Services\TopicService;
 
 new #[Layout('components.layouts.lecturer')] class extends Component {
     use WithPagination;
@@ -50,21 +50,14 @@ new #[Layout('components.layouts.lecturer')] class extends Component {
 
     public function with(): array
     {
+        $service = app(TopicService::class);
         $lecturer = auth()->user();
-        $selectedPeriod = $this->filterPeriod ? Period::find($this->filterPeriod) : null;
+        $selectedPeriod = $this->filterPeriod ? app(\App\Services\PeriodService::class)->findPeriod($this->filterPeriod) : null;
 
         return [
-            'topics' => LecturerTopic::with('period')
-                ->where('lecturer_id', $lecturer->id)
-                ->when($this->search, function ($query) {
-                    $query->where('topic', 'like', '%' . $this->search . '%');
-                })
-                ->when($this->filterPeriod, function ($query) {
-                    $query->where('period_id', $this->filterPeriod);
-                })
-                ->latest()
+            'topics' => $service->getTopicsForLecturer($lecturer->id, $this->search, $this->filterPeriod)
                 ->paginate(15),
-            'periods' => Period::notArchived()->orderBy('start_date', 'desc')->get(),
+            'periods' => $service->getActivePeriods(),
             'lecturer' => $lecturer,
             'selectedPeriod' => $selectedPeriod,
             'periodQuota' => $selectedPeriod ? $selectedPeriod->getLecturerQuota($lecturer) : null,
@@ -98,18 +91,22 @@ new #[Layout('components.layouts.lecturer')] class extends Component {
     public function save(): void
     {
         $this->validate();
+        $service = app(TopicService::class);
 
-        if (!$this->editing) {
-            $this->editing = new LecturerTopic();
+        $data = [
+            'lecturer_id' => auth()->id(),
+            'topic' => $this->topic,
+            'description' => $this->description,
+            'student_quota' => $this->student_quota,
+            'period_id' => $this->period_id,
+            'is_available' => $this->is_available,
+        ];
+
+        if ($this->editing && $this->editing->exists) {
+            $service->updateTopic($this->editing, $data);
+        } else {
+            $service->createTopic($data);
         }
-
-        $this->editing->lecturer_id = auth()->id();
-        $this->editing->topic = $this->topic;
-        $this->editing->description = $this->description;
-        $this->editing->student_quota = $this->student_quota;
-        $this->editing->period_id = $this->period_id;
-        $this->editing->is_available = $this->is_available;
-        $this->editing->save();
 
         session()->flash('success', 'Topic saved successfully.');
         $this->showModal = false;
@@ -122,7 +119,7 @@ new #[Layout('components.layouts.lecturer')] class extends Component {
             abort(403);
         }
 
-        $topic->delete();
+        app(TopicService::class)->deleteTopic($topic);
         session()->flash('success', 'Topic deleted successfully.');
     }
 
@@ -132,9 +129,7 @@ new #[Layout('components.layouts.lecturer')] class extends Component {
             abort(403);
         }
 
-        $topic->is_available = !$topic->is_available;
-        $topic->save();
-
+        app(TopicService::class)->toggleAvailability($topic);
         session()->flash('success', 'Topic availability updated.');
     }
 

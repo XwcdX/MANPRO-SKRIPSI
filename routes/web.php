@@ -41,11 +41,17 @@ Route::prefix('lecturer')->name('lecturer.')->middleware(['auth:lecturer', 'veri
 
     Volt::route('schedules/availability', 'lecturer.schedules.availability')->name('schedules.availability');
 
+    Volt::route('applications', 'lecturer.applications.index')->name('applications.index');
+    Volt::route('students', 'lecturer.students.index')->name('students.index');
+    Volt::route('my-students', 'lecturer.my-students.index')->name('my-students.index');
+
     Route::middleware('permission:administrate,lecturer')->group(function () {
         Volt::route('roles', 'lecturer.roles.index')->name('roles.index');
         Volt::route('management', 'lecturer.lecturers.index')->name('lecturers.index');
         Volt::route('roles/management', 'lecturer.assignments.index')->name('assignments.index');
         Volt::route('{lecturer}/roles', 'lecturer.assignments.edit')->name('assignments.edit');
+        Volt::route('divisions', 'lecturer.divisions.index')->name('divisions.index');
+        Volt::route('divisions/assign', 'lecturer.assign-divisions.index')->name('assign-divisions.index');
         Volt::route('periods', 'lecturer.periods.index')->name('periods.index');
         Volt::route('periods/{period}/quotas', 'lecturer.periods.manage-quotas')->name('periods.manage-quotas');
     });

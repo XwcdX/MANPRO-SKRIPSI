@@ -11,7 +11,7 @@ class LecturersExport implements FromCollection, WithHeadings, WithMapping
 {
     public function collection()
     {
-        return Lecturer::with('roles', 'division')->get();
+        return Lecturer::with('roles', 'divisions')->get();
     }
 
     public function headings(): array
@@ -28,14 +28,14 @@ class LecturersExport implements FromCollection, WithHeadings, WithMapping
 
     public function map($lecturer): array
     {
-        $roleName = $lecturer->roles->first()->name ?? 'Supervisor';
-        $divisionName = optional($lecturer->division)->name ?? '';
+        $roleNames = $lecturer->roles->pluck('name')->implode(', ') ?: 'Supervisor';
+        $divisionNames = $lecturer->divisions->pluck('name')->implode(', ');
 
         return [
             $lecturer->name,
             $lecturer->email,
-            $roleName,
-            $divisionName,
+            $roleNames,
+            $divisionNames,
             '',
         ];
     }

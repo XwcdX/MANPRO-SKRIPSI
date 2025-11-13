@@ -119,4 +119,9 @@ class Student extends Authenticatable implements MustVerifyEmail
     {
         return $this->hasMany(HistoryProposal::class);
     }
+
+    public function latestProposal()
+    {
+        return $this->hasOne(HistoryProposal::class)->latestOfMany();
+    }
 }

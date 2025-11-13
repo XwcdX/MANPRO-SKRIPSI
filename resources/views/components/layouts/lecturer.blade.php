@@ -36,19 +36,40 @@
                 </flux:navlist.item>
             </flux:navlist.group>
 
+            <flux:navlist.group :heading="__('Students')" class="grid">
+                <flux:navlist.item icon="user-group" :href="route('lecturer.students.index')"
+                    :current="request()->routeIs('lecturer.students.*')" wire:navigate>{{ __('View All Students') }}
+                </flux:navlist.item>
+                <flux:navlist.item icon="academic-cap" :href="route('lecturer.my-students.index')"
+                    :current="request()->routeIs('lecturer.my-students.*')" wire:navigate>{{ __('My Students') }}
+                </flux:navlist.item>
+                <flux:navlist.item icon="inbox" :href="route('lecturer.applications.index')"
+                    :current="request()->routeIs('lecturer.applications.*')" wire:navigate>{{ __('Applications') }}
+                </flux:navlist.item>
+            </flux:navlist.group>
+
             @can('administrate')
-                <flux:navlist.group :heading="__('Administration')" class="grid">
+                <flux:navlist.group :heading="__('Manage')" class="grid">
+                    <flux:navlist.item icon="user-group" :href="route('lecturer.lecturers.index')"
+                        :current="request()->routeIs('lecturer.lecturers.*')" wire:navigate>{{ __('Lecturers') }}
+                    </flux:navlist.item>
                     <flux:navlist.item icon="shield-check" :href="route('lecturer.roles.index')"
                         :current="request()->routeIs('lecturer.roles.*')" wire:navigate>{{ __('Roles & Permissions') }}
                     </flux:navlist.item>
-                    <flux:navlist.item icon="user-circle" :href="route('lecturer.assignments.index')"
-                        :current="request()->routeIs('lecturer.assignments.*')" wire:navigate>{{ __('Assign Roles') }}
-                    </flux:navlist.item>
-                    <flux:navlist.item icon="user-group" :href="route('lecturer.lecturers.index')"
-                        :current="request()->routeIs('lecturer.lecturers.*')" wire:navigate>{{ __('Manage Lecturers') }}
+                    <flux:navlist.item icon="building-office" :href="route('lecturer.divisions.index')"
+                        :current="request()->routeIs('lecturer.divisions.index')" wire:navigate>{{ __('Divisions') }}
                     </flux:navlist.item>
                     <flux:navlist.item icon="calendar-days" :href="route('lecturer.periods.index')"
-                        :current="request()->routeIs('lecturer.periods.*')" wire:navigate>{{ __('Manage Periods') }}
+                        :current="request()->routeIs('lecturer.periods.*')" wire:navigate>{{ __('Periods') }}
+                    </flux:navlist.item>
+                </flux:navlist.group>
+
+                <flux:navlist.group :heading="__('Assign')" class="grid">
+                    <flux:navlist.item icon="user-circle" :href="route('lecturer.assignments.index')"
+                        :current="request()->routeIs('lecturer.assignments.*')" wire:navigate>{{ __('Roles') }}
+                    </flux:navlist.item>
+                    <flux:navlist.item icon="squares-plus" :href="route('lecturer.assign-divisions.index')"
+                        :current="request()->routeIs('lecturer.assign-divisions.*')" wire:navigate>{{ __('Divisions') }}
                     </flux:navlist.item>
                 </flux:navlist.group>
             @endcan

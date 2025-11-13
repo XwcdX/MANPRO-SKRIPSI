@@ -20,11 +20,11 @@ class Division extends Model
 
     public function lecturers()
     {
-        return $this->hasMany(Lecturer::class);
+        return $this->belongsToMany(Lecturer::class, 'division_lecturer')->withTimestamps();
     }
 
     public function headOfDivision()
     {
-        return $this->hasOne(Lecturer::class)->where('title', 2);
+        return $this->hasOne(Lecturer::class, 'primary_division_id');
     }
 }

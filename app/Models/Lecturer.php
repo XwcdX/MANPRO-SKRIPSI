@@ -23,7 +23,7 @@ class Lecturer extends Authenticatable implements MustVerifyEmail
         'email',
         'password',
         'title',
-        'division_id',
+        'primary_division_id',
         'is_active',
     ];
 
@@ -51,9 +51,14 @@ class Lecturer extends Authenticatable implements MustVerifyEmail
         return strtoupper($initials);
     }
 
-    public function division()
+    public function divisions()
     {
-        return $this->belongsTo(Division::class);
+        return $this->belongsToMany(Division::class, 'division_lecturer')->withTimestamps();
+    }
+
+    public function primaryDivision()
+    {
+        return $this->belongsTo(Division::class, 'primary_division_id');
     }
 
     public function students()

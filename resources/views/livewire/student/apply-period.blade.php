@@ -14,7 +14,10 @@ new #[Layout('components.layouts.auth')] class extends Component {
 
     public function mount(CrudService $crud)
     {
-        $this->period = $crud->setModel(new Period())->getModel()->where('status', 'registration_open')->first();
+        $this->period = Period::whereNull('archived_at')
+            ->where('start_date', '<=', now())
+            ->where('registration_end', '>=', now())
+            ->first();
     }
     public function register(PeriodService $periodService)
     {

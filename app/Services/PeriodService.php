@@ -20,6 +20,11 @@ class PeriodService
     {
         return Period::active();
     }
+
+    public function findPeriod(string $periodId): ?Period
+    {
+        return Period::find($periodId);
+    }
     
     public function canStudentRegister(): bool
     {

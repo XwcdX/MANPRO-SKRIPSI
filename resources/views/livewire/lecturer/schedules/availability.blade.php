@@ -2,10 +2,9 @@
 
 use Livewire\Attributes\Layout;
 use Livewire\Volt\Component;
-use App\Models\Period;
-use App\Models\LecturerAvailability;
+use App\Services\AvailabilityService;
+use App\Services\PeriodService;
 use Carbon\Carbon;
-use Carbon\CarbonPeriod;
 
 new #[Layout('components.layouts.lecturer')] 
 class extends Component {
@@ -28,20 +27,13 @@ class extends Component {
             return;
         }
 
-        $period = Period::find($this->selectedPeriod);
+        $period = app(PeriodService::class)->findPeriod($this->selectedPeriod);
         if (!$period) {
             $this->timeSlots = [];
             return;
         }
 
-        $this->timeSlots = [];
-        $start = Carbon::parse($period->schedule_start_time ?? '07:30');
-        $end = Carbon::parse($period->schedule_end_time ?? '18:00');
-        
-        while ($start->lt($end)) {
-            $this->timeSlots[] = $start->format('H:i');
-            $start->addMinutes(30);
-        }
+        $this->timeSlots = app(AvailabilityService::class)->generateTimeSlots($period);
     }
 
     public function updatedSelectedPeriod(): void
@@ -63,72 +55,36 @@ class extends Component {
             return;
         }
 
-        $period = Period::find($this->selectedPeriod);
+        $service = app(AvailabilityService::class);
+        $period = app(PeriodService::class)->findPeriod($this->selectedPeriod);
         if (!$period) return;
 
-        if ($this->selectedType === 'proposal_hearing') {
-            $startDate = $period->proposal_hearing_start;
-            $endDate = $period->proposal_hearing_end;
-        } else {
-            $startDate = $period->thesis_start;
-            $endDate = $period->thesis_end;
-        }
-
-        if (!$startDate || !$endDate) {
-            $this->dates = [];
+        $this->dates = $service->getDateRange($period, $this->selectedType);
+        
+        if (empty($this->dates)) {
             $this->availability = [];
             return;
         }
 
-        $this->dates = [];
-        $dateRange = CarbonPeriod::create($startDate, $endDate);
-        foreach ($dateRange as $date) {
-            if ($date->dayOfWeek !== 0) {
-                $this->dates[] = $date->format('Y-m-d');
-            }
-        }
-
-        $existing = LecturerAvailability::where('lecturer_id', auth()->id())
-            ->where('period_id', $this->selectedPeriod)
-            ->where('type', $this->selectedType)
-            ->get();
-
-        $this->availability = [];
-        foreach ($existing as $item) {
-            $key = Carbon::parse($item->date)->format('Y-m-d') . '_' . $item->time_slot;
-            $this->availability[$key] = $item->is_available;
-        }
-
-        foreach ($this->dates as $date) {
-            foreach ($this->timeSlots as $time) {
-                $key = $date . '_' . $time;
-                if (!isset($this->availability[$key])) {
-                    $this->availability[$key] = true;
-                }
-            }
-        }
+        $this->availability = $service->loadAvailability(
+            auth()->id(),
+            $this->selectedPeriod,
+            $this->selectedType,
+            $this->dates,
+            $this->timeSlots
+        );
     }
 
 
 
     public function saveChanges(array $availability): void
     {
-        foreach ($availability as $key => $isAvailable) {
-            [$date, $time] = explode('_', $key);
-            
-            LecturerAvailability::updateOrCreate(
-                [
-                    'lecturer_id' => auth()->id(),
-                    'period_id' => $this->selectedPeriod,
-                    'type' => $this->selectedType,
-                    'date' => $date,
-                    'time_slot' => $time,
-                ],
-                [
-                    'is_available' => $isAvailable,
-                ]
-            );
-        }
+        app(AvailabilityService::class)->saveAvailability(
+            auth()->id(),
+            $this->selectedPeriod,
+            $this->selectedType,
+            $availability
+        );
 
         $this->availability = $availability;
         $this->dispatch('open-modal', 'save-success-modal');
@@ -137,11 +93,7 @@ class extends Component {
     public function with(): array
     {
         return [
-            'periods' => Period::notArchived()
-                ->whereNotNull('proposal_hearing_start')
-                ->orWhereNotNull('thesis_start')
-                ->orderBy('start_date', 'desc')
-                ->get(),
+            'periods' => app(AvailabilityService::class)->getPeriodsWithSchedules(),
         ];
     }
 };

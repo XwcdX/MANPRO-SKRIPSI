@@ -17,6 +17,7 @@ class SupervisionApplication extends Model
         'student_id',
         'lecturer_id',
         'period_id',
+        'division_id',
         'proposed_role',
         'student_notes',
         'lecturer_notes',
@@ -40,5 +41,10 @@ class SupervisionApplication extends Model
     public function period()
     {
         return $this->belongsTo(Period::class);
+    }
+
+    public function division()
+    {
+        return $this->belongsTo(Division::class);
     }
 }
