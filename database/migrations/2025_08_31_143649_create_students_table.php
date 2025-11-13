@@ -29,6 +29,7 @@ return new class extends Migration {
 
             $table->index('status', 'idx_students_status');
             $table->index('email', 'idx_students_email');
+            $table->index('is_active');
         });
     }
 

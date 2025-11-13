@@ -22,7 +22,6 @@ class Lecturer extends Authenticatable implements MustVerifyEmail
         'name',
         'email',
         'password',
-        'title',
         'primary_division_id',
         'is_active',
     ];
@@ -35,7 +34,6 @@ class Lecturer extends Authenticatable implements MustVerifyEmail
     protected $casts = [
         'email_verified_at' => 'datetime',
         'password' => 'hashed',
-        'title' => 'integer',
         'is_active' => 'boolean',
     ];
 
@@ -76,27 +74,7 @@ class Lecturer extends Authenticatable implements MustVerifyEmail
 
 
 
-    public function getTitleTextAttribute()
-    {
-        $titles = [
-            0 => 'Supervisor 2 Only',
-            1 => 'Can be Supervisor 1',
-            2 => 'Head of Division',
-            3 => 'Head of Thesis Department'
-        ];
 
-        return $titles[$this->title] ?? 'Unknown';
-    }
-
-    public function canSupervise()
-    {
-        return in_array($this->title, [0, 1]);
-    }
-
-    public function canBeLeadSupervisor()
-    {
-        return $this->title >= 1;
-    }
 
     public function isAtCapacity()
     {

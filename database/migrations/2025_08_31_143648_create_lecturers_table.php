@@ -17,12 +17,20 @@ return new class extends Migration {
             $table->string('password');
             $table->timestamp('email_verified_at')->nullable();
             $table->rememberToken();
-            $table->tinyInteger('title')->default(0)->comment('0=Supervisor 2 only, 1=Can be Supervisor 1, 2=Head of Division, 3=Head of Thesis Department');
-            $table->foreignUuid('division_id')->nullable()->comment('Only for head of division or head of thesis')->constrained('divisions')->onDelete('set null');
+            $table->foreignUuid('primary_division_id')->nullable()->comment('Division they head')->constrained('divisions')->onDelete('set null');
             $table->boolean('is_active')->default(true);
             $table->timestamps();
+            
+            $table->index('is_active');
+            $table->index('email');
+        });
 
-            $table->index('title', 'idx_lecturers_title');
+        Schema::create('division_lecturer', function (Blueprint $table) {
+            $table->foreignUuid('lecturer_id')->constrained('lecturers')->onDelete('cascade');
+            $table->foreignUuid('division_id')->constrained('divisions')->onDelete('cascade');
+            $table->timestamps();
+            
+            $table->primary(['lecturer_id', 'division_id']);
         });
 
         Schema::create('password_reset_tokens', function (Blueprint $table) {
@@ -46,6 +54,7 @@ return new class extends Migration {
      */
     public function down(): void
     {
+        Schema::dropIfExists('division_lecturer');
         Schema::dropIfExists('lecturers');
         Schema::dropIfExists('password_reset_tokens');
         Schema::dropIfExists('sessions');

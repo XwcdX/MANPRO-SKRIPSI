@@ -154,17 +154,15 @@ new #[Layout('components.layouts.lecturer')] class extends Component {
     </section>
 
     @if($showModal)
-        <flux:modal name="division-modal" wire:model="showModal" class="max-w-md">
+        <flux:modal name="division-modal" wire:model="showModal" class="max-w-2xl w-full">
             <form wire:submit.prevent="save" class="space-y-6">
-                <div>
-                    <flux:heading size="lg">
-                        {{ $editingId ? 'Edit Division' : 'Add New Division' }}
-                    </flux:heading>
-                </div>
+                <flux:heading size="lg">
+                    {{ $editingId ? 'Edit Division' : 'Add New Division' }}
+                </flux:heading>
                 
                 <div class="space-y-4">
-                    <flux:input wire:model="name" label="Name" required />
-                    <flux:textarea wire:model="description" label="Description" rows="3" />
+                    <flux:input wire:model="name" label="Name" required class="w-full" />
+                    <flux:textarea wire:model="description" label="Description" rows="3" class="w-full" />
                 </div>
 
                 <div class="flex gap-2">

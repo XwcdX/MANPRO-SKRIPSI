@@ -54,6 +54,7 @@ Route::prefix('lecturer')->name('lecturer.')->middleware(['auth:lecturer', 'veri
         Volt::route('divisions/assign', 'lecturer.assign-divisions.index')->name('assign-divisions.index');
         Volt::route('periods', 'lecturer.periods.index')->name('periods.index');
         Volt::route('periods/{period}/quotas', 'lecturer.periods.manage-quotas')->name('periods.manage-quotas');
+        Volt::route('venues', 'lecturer.venues.index')->name('venues.index');
     });
 
     Volt::route('profile', 'lecturer.profile')->name('profile');

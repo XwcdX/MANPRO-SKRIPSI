@@ -62,6 +62,9 @@
                     <flux:navlist.item icon="calendar-days" :href="route('lecturer.periods.index')"
                         :current="request()->routeIs('lecturer.periods.*')" wire:navigate>{{ __('Periods') }}
                     </flux:navlist.item>
+                    <flux:navlist.item icon="map-pin" :href="route('lecturer.venues.index')"
+                        :current="request()->routeIs('lecturer.venues.*')" wire:navigate>{{ __('Venues') }}
+                    </flux:navlist.item>
                 </flux:navlist.group>
 
                 <flux:navlist.group :heading="__('Assign')" class="grid">

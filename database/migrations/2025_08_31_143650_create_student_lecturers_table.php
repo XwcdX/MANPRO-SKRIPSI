@@ -23,6 +23,9 @@ return new class extends Migration
 
             $table->unique(['student_id', 'lecturer_id', 'role'], 'unique_student_supervisor');
             $table->index('role', 'idx_student_lecturers_role');
+            $table->index('status');
+            $table->index(['student_id', 'status']);
+            $table->index(['lecturer_id', 'status']);
         });
     }
 

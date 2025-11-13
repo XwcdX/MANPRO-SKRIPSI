@@ -32,7 +32,6 @@ class extends Component {
 
     public string $name = '';
     public string $email = '';
-    public int $title = 0;
     public ?string $primary_division_id = null;
     public array $selected_divisions = [];
     public bool $is_active = true;
@@ -79,7 +78,6 @@ class extends Component {
         $rules = [
             'name' => 'required|string|max:100',
             'email' => ['required', 'email', 'max:100'],
-            'title' => 'required|integer|in:0,1,2,3',
             'primary_division_id' => 'nullable|uuid|exists:divisions,id',
             'selected_divisions' => 'nullable|array',
             'selected_divisions.*' => 'uuid|exists:divisions,id',
@@ -134,7 +132,6 @@ class extends Component {
         $this->editing = new Lecturer();
         $this->name = '';
         $this->email = '';
-        $this->title = 0;
         $this->primary_division_id = null;
         $this->selected_divisions = [];
         $this->is_active = true;
@@ -147,7 +144,6 @@ class extends Component {
         $this->editing = $lecturer;
         $this->name = $lecturer->name;
         $this->email = $lecturer->email;
-        $this->title = $lecturer->title;
         $this->primary_division_id = $lecturer->primary_division_id;
         $this->selected_divisions = $lecturer->divisions->pluck('id')->toArray();
         $this->is_active = $lecturer->is_active;
@@ -164,7 +160,6 @@ class extends Component {
 
         $this->editing->name = $this->name;
         $this->editing->email = $this->email;
-        $this->editing->title = $this->title;
         $this->editing->primary_division_id = $this->primary_division_id ?: null;
         $this->editing->is_active = $this->is_active;
 
@@ -230,7 +225,7 @@ class extends Component {
     private function resetInput(): void
     {
         $this->resetErrorBag();
-        $this->reset('password', 'password_confirmation', 'upload', 'name', 'email', 'title', 'primary_division_id', 'selected_divisions', 'is_active');
+        $this->reset('password', 'password_confirmation', 'upload', 'name', 'email', 'primary_division_id', 'selected_divisions', 'is_active');
     }
 };
 
@@ -386,20 +381,17 @@ class extends Component {
     </section>
 
     @if ($showModal)
-        <flux:modal name="lecturer-modal" wire:model="showModal" class="max-w-md">
+        <flux:modal name="lecturer-modal" wire:model="showModal" class="max-w-2xl">
             <form wire:submit.prevent="save" class="space-y-6">
-                <div>
-                    <flux:heading size="lg">
-                        {{ $editing && $editing->exists ? 'Edit Lecturer' : 'Add New Lecturer' }}
-                    </flux:heading>
-                </div>
+                <flux:heading size="lg">
+                    {{ $editing && $editing->exists ? 'Edit Lecturer' : 'Add New Lecturer' }}
+                </flux:heading>
 
-                <div class="space-y-4">
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <flux:input wire:model="name" label="Name" required />
-
                     <flux:input wire:model="email" type="email" label="Email" required />
 
-                    <div>
+                    <div class="md:col-span-2">
                         <flux:label>Divisions (Specializations)</flux:label>
                         <div class="mt-2 space-y-2 max-h-48 overflow-y-auto border border-zinc-300 dark:border-zinc-600 rounded-lg p-3">
                             @foreach ($divisions as $division)
@@ -414,20 +406,23 @@ class extends Component {
                         @enderror
                     </div>
 
-                    <flux:select wire:model="primary_division_id" label="Primary Division (Head of)">
-                        <option value="">None - Not a division head</option>
-                        @foreach ($divisions as $division)
-                            <option value="{{ $division->id }}">{{ $division->name }}</option>
-                        @endforeach
-                    </flux:select>
+                    <div class="md:col-span-2">
+                        <flux:select wire:model="primary_division_id" label="Primary Division (Head of)">
+                            <option value="">None - Not a division head</option>
+                            @foreach ($divisions as $division)
+                                <option value="{{ $division->id }}">{{ $division->name }}</option>
+                            @endforeach
+                        </flux:select>
+                    </div>
 
                     <flux:input wire:model="password" type="password" label="Password"
                         :placeholder="$editing && $editing->exists ? 'Leave blank to keep current' : ''"
                         :required="!$editing || !$editing->exists" />
-
                     <flux:input wire:model="password_confirmation" type="password" label="Confirm Password" />
 
-                    <flux:checkbox wire:model="is_active" label="Active" />
+                    <div class="md:col-span-2">
+                        <flux:checkbox wire:model="is_active" label="Active" />
+                    </div>
                 </div>
 
                 <div class="flex gap-2">
