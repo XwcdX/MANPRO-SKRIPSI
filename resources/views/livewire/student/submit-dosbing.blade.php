@@ -26,10 +26,9 @@ new class extends Component {
 
     protected $crud;
 
-    public function mount($user)
+    public function mount()
     {
         $this->crud = new CrudService();
-        $this->user = $user;
         $this->user->load([
             'supervisionApplications' => fn ($q) => $q->where('period_id', $this->user->activePeriod()->id)
         ]);

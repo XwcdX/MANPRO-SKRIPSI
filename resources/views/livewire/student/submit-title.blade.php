@@ -11,14 +11,12 @@ new class extends Component {
     public string $title = '';
     public string $description = '';
     public ?int $status = null;
-    public $user;
 
-    public function mount($user)
+    public function mount()
     {
-        $this->user = $user;
-        $this->status = $user->status ?? 0;
-        $this->title = $this->status > 0 ? $user->thesis_title : '';
-        $this->description = $this->status > 0 ? $user->thesis_description ?? '' : '';
+        $this->status = $this->user->status ?? 0;
+        $this->title = $this->status > 0 ? $this->user->thesis_title : '';
+        $this->description = $this->status > 0 ? $this->user->thesis_description ?? '' : '';
     }
 
     public function submit(SubmissionService $service)
