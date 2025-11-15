@@ -87,8 +87,8 @@ new class extends Component {
             </div>
 
             {{-- @livewire('student.submit-title', ['user' => $this->user]) --}}
-            {{-- @livewire('student.submit-dosbing', ['user' => $this->user]) --}}
-            @livewire('student.upload-proposal', ['user' => $this->user])
+            @livewire('student.submit-dosbing', ['user' => $this->user])
+            {{-- @livewire('student.upload-proposal', ['user' => $this->user]) --}}
         </div> {{-- End Desktop Container --}}
 
 
@@ -132,8 +132,8 @@ new class extends Component {
                                 @if($index == $studentStatus)
                                     {{-- kasih if per step kalau step 0 ya ini nanti kalau step 1 beda lagi, stepnya nanti berubah tiap klik tombol lingkaran --}}
                                     {{-- @livewire('student.submit-title', ['user' => $this->user]) --}}
-                                    {{-- @livewire('student.submit-dosbing', ['user' => $this->user]) --}}
-                                    @livewire('student.upload-proposal', ['user' => $this->user])
+                                    @livewire('student.submit-dosbing', ['user' => $this->user])
+                                    {{-- @livewire('student.upload-proposal', ['user' => $this->user]) --}}
                                 @elseif($index < $studentStatus)
                                     <p>Tahap **{{ $step }}** telah diselesaikan.</p>
                                 @else

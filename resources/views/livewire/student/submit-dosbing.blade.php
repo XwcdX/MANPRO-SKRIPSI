@@ -18,10 +18,10 @@ new class extends Component {
     public array $lecturerDivisions = [];
     public ?string $dosbing1 = null;
     public ?string $dosbing2 = null;
-    public ?string $division1 = null;
-    public ?string $division2 = null;
     public ?string $reason1 = null;
     public ?string $reason2 = null;
+    public ?string $status1 = null;
+    public ?string $status2 = null;
 
 
     protected $crud;
@@ -30,6 +30,32 @@ new class extends Component {
     {
         $this->crud = new CrudService();
         $this->user = $user;
+        $this->user->load([
+            'supervisionApplications' => fn ($q) => $q->where('period_id', $this->user->activePeriod()->id)
+        ]);
+        $supervisor = $this->user->supervisionApplications->map(function ($s) {
+            return [
+                'id' => $s->id,
+                'student_notes' => $s->student_notes,
+                'lecturer_id' => $s->lecturer_id,
+                'proposed_role' => $s->proposed_role,
+                'status' => $s->status,
+            ];
+        })->toArray();
+        if($supervisor){
+            foreach ($supervisor as $s) {
+                if($s['proposed_role'] == 0){
+                    $this->dosbing1 = $s['lecturer_id'];
+                    $this->reason1 = $s['student_notes'];
+                    $this->status1 = $s['status'];
+                }
+                else if($s['proposed_role'] == 1){
+                    $this->dosbing2 = $s['lecturer_id'];
+                    $this->reason2 = $s['student_notes'];
+                    $this->status2 = $s['status'];
+                }
+            }
+        }
         $this->status = $user->status ?? 0;
         $raw = Lecturer::with('divisions')->get();
 
@@ -38,11 +64,6 @@ new class extends Component {
         ])->toArray();
         $this->lecturers2 = $raw->mapWithKeys(fn ($lecturer) => [
             $lecturer->id => $lecturer->name . ($lecturer->divisions->isNotEmpty() ? ' (' . $lecturer->divisions->pluck('name')->implode(', ') . ')' : '')
-        ])->toArray();
-        
-        // Store divisions for each lecturer
-        $this->lecturerDivisions = $raw->mapWithKeys(fn ($lecturer) => [
-            $lecturer->id => $lecturer->divisions->map(fn($div) => ['id' => $div->id, 'name' => $div->name])->toArray()
         ])->toArray();
     }
 
@@ -60,26 +81,25 @@ new class extends Component {
         }
 
         $lecturerId = $dosbing === 0 ? $this->dosbing1 : $this->dosbing2;
-        $divisionId = $dosbing === 0 ? $this->division1 : $this->division2;
         $reason = $dosbing === 0 ? $this->reason1 : $this->reason2;
 
-        $success = $service->assignSupervisor(
+        $response = $service->assignSupervisor(
             studentId: $this->user->id,
             supervisorId: $lecturerId,
             role: $dosbing,
             note: $reason,
-            divisionId: $divisionId
         );
 
-        if ($success) {
-            $this->dispatch('notify', type: 'success', message: "Pengajuan Dosen Pembimbing " . ($dosbing + 1) . " berhasil dikirim.");
+        if ($response['success']) {
             if ($dosbing === 0) {
-                $this->reset(['dosbing1', 'division1', 'reason1']);
+                $this->status1 = 'pending';
             } else {
-                $this->reset(['dosbing2', 'division2', 'reason2']);
+                $this->status2 = 'pending';
             }
+
+            $this->dispatch('notify', type: 'success', message: $response['message']);
         } else {
-            $this->dispatch('notify', type: 'error', message: "Gagal mengajukan Dosen Pembimbing " . ($dosbing + 1) . ".");
+            $this->dispatch('notify', type: 'error', message: $response['message']);
         }
     }
 };
@@ -97,6 +117,7 @@ new class extends Component {
 
                 <select id="dosbing1"
                     wire:model.live="dosbing1"
+                    @disabled($status1 === 'pending' || $status1 === 'accepted')
                     class="bg-gray-100 border border-gray-300 rounded-lg p-2.5 text-sm">
                     <option value="">Pilih dosen...</option>
                     @foreach ($lecturers1 as $id => $name)
@@ -104,26 +125,23 @@ new class extends Component {
                     @endforeach
                 </select>
 
-                @if($dosbing1 && is_string($dosbing1) && isset($lecturerDivisions[$dosbing1]) && count($lecturerDivisions[$dosbing1]) > 0)
-                    <select wire:model="division1"
-                        class="bg-gray-100 border border-gray-300 rounded-lg p-2.5 text-sm">
-                        <option value="">Pilih bidang/divisi...</option>
-                        @foreach ($lecturerDivisions[$dosbing1] as $division)
-                            <option value="{{ $division['id'] }}">{{ $division['name'] }}</option>
-                        @endforeach
-                    </select>
-                @endif
-
                 <!-- Textbox tambahan -->
                 <input type="text"
                     wire:model.defer="reason1"
+                    @disabled($status1 === 'pending' || $status1 === 'accepted')
                     placeholder="Tulis alasan pengajuan dosbing 1..."
                     class="bg-white border border-gray-300 rounded-lg p-2.5 text-sm focus:ring focus:ring-gray-200" />
             </div>
 
-            <button wire:click="submit(0)"
-                class="px-3 py-1.5 sm:px-6 sm:py-2.5 bg-gray-700 text-white font-medium rounded-lg text-sm sm:text-base hover:bg-gray-800 transition duration-200 self-end sm:self-center">
-                Ajukan
+            <button
+                wire:click="submit(0)"
+                wire:loading.attr="disabled"
+                wire:target="submit"
+                @disabled($status1 === 'pending' || $status1 === 'accepted')
+                class="px-3 py-1.5 sm:px-6 sm:py-2.5 bg-gray-700 text-white font-medium rounded-lg text-sm sm:text-base transition duration-200 self-end sm:self-center
+                    {{ $status1 === 'pending' || $status1 === 'accepted' ? 'opacity-50 cursor-not-allowed' : 'hover:bg-gray-800' }}"
+            >
+                {{ $status1 === 'pending' ? 'Pending' : ($status1 === 'accepted' ? 'Accepted' : 'Ajukan') }}
             </button>
         </div>
 
@@ -134,6 +152,7 @@ new class extends Component {
 
                 <select id="dosbing2"
                     wire:model.live="dosbing2"
+                    @disabled($status2 === 'pending' || $status2 === 'accepted')
                     class="bg-gray-100 border border-gray-300 rounded-lg p-2.5 text-sm">
                     <option value="">Pilih dosen...</option>
                     @foreach ($lecturers2 as $id => $name)
@@ -141,26 +160,23 @@ new class extends Component {
                     @endforeach
                 </select>
 
-                @if($dosbing2 && is_string($dosbing2) && isset($lecturerDivisions[$dosbing2]) && count($lecturerDivisions[$dosbing2]) > 0)
-                    <select wire:model="division2"
-                        class="bg-gray-100 border border-gray-300 rounded-lg p-2.5 text-sm">
-                        <option value="">Pilih bidang/divisi...</option>
-                        @foreach ($lecturerDivisions[$dosbing2] as $division)
-                            <option value="{{ $division['id'] }}">{{ $division['name'] }}</option>
-                        @endforeach
-                    </select>
-                @endif
-
                 <!-- Textbox tambahan -->
                 <input type="text"
                     wire:model.defer="reason2"
+                    @disabled($status2 === 'pending' || $status2 === 'accepted')
                     placeholder="Tulis alasan pengajuan dosbing 2..."
                     class="bg-white border border-gray-300 rounded-lg p-2.5 text-sm focus:ring focus:ring-gray-200" />
             </div>
 
-            <button wire:click="submit(1)"
-                class="px-3 py-1.5 sm:px-6 sm:py-2.5 bg-gray-700 text-white font-medium rounded-lg text-sm sm:text-base hover:bg-gray-800 transition duration-200 self-end sm:self-center">
-                Ajukan
+            <button
+                wire:click="submit(1)"
+                wire:loading.attr="disabled"
+                wire:target="submit"
+                @disabled($status2 === 'pending' || $status2 === 'accepted')
+                class="px-3 py-1.5 sm:px-6 sm:py-2.5 bg-gray-700 text-white font-medium rounded-lg text-sm sm:text-base transition duration-200 self-end sm:self-center
+                    {{ $status2 === 'pending' || $status2 === 'accepted' ? 'opacity-50 cursor-not-allowed' : 'hover:bg-gray-800' }}"
+            >
+                {{ $status2 === 'pending' ? 'Pending' : ($status2 === 'accepted' ? 'Accepted' : 'Ajukan') }}
             </button>
         </div>
 

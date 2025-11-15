@@ -111,7 +111,7 @@ class SubmissionService
      * @param string $note
      * @param string|null $divisionId
      */
-    public function assignSupervisor(string $studentId, string $supervisorId, int $role, string $note, ?string $divisionId = null): bool
+    public function assignSupervisor(string $studentId, string $supervisorId, int $role, string $note): array
     {
         try {
             $student = $this->crud->setModel(new Student())->find($studentId);
@@ -129,23 +129,39 @@ class SubmissionService
                 throw new \Exception('Tidak ada periode aktif saat ini.');
             }
 
+            $exists = SupervisionApplication::where('student_id', $student->id)
+                ->where('lecturer_id', $lecturer->id)
+                ->where('proposed_role', $role)
+                ->where('period_id', $period->id)
+                ->exists();
+
+            if ($exists) {
+                throw new \Exception('Pengajuan sudah pernah dibuat sebelumnya');
+            }
+
             $this->crud->setModel(new SupervisionApplication())->create([
                 'period_id' => $period->id,
                 'lecturer_id' => $lecturer->id,
                 'student_id' => $student->id,
-                'division_id' => $divisionId,
                 'proposed_role' => $role,
                 'student_notes' => $note,
             ]);
 
-            return true;
+            return [
+                'success' => true,
+                'message' => 'Pengajuan berhasil dikirim'
+            ];
 
         } catch (\Throwable $e) {
             \Log::error('Gagal assign supervisor: ' . $e->getMessage(), [
                 'student_id' => $studentId,
                 'supervisor_id' => $supervisorId,
+                'error' => $e->getMessage()
             ]);
-            return false;
+            return [
+                'success' => false,
+                'message' => $e->getMessage()
+            ];
         }
     }
 }

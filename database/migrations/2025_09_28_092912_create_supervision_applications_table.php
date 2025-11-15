@@ -15,7 +15,6 @@ return new class extends Migration {
             $table->foreignUuid('period_id')->constrained('periods')->onDelete('restrict');
             $table->foreignUuid('student_id')->constrained('students')->onDelete('cascade');
             $table->foreignUuid('lecturer_id')->constrained('lecturers')->onDelete('cascade');
-            $table->foreignUuid('division_id')->nullable()->constrained('divisions')->onDelete('set null');
             $table->tinyInteger('proposed_role')->comment('0=Supervisor 1, 1=Supervisor 2');
             $table->text('student_notes')->nullable()->comment('Pesan dari mahasiswa kepada dosen');
             $table->text('lecturer_notes')->nullable()->comment('Catatan/alasan dari dosen');
