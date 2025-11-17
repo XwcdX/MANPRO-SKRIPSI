@@ -177,31 +177,6 @@ new class extends Component {
 
 <script>
     document.addEventListener('DOMContentLoaded', function () {
-        const accordionContainer = document.getElementById('mobile-accordion-container');
-        const desktopContainer = document.getElementById('desktop-content-container');
-        const desktopBreakpoint = 768; 
-
-        function toggleDisplayBasedOnWidth() {
-            if (window.innerWidth >= desktopBreakpoint) {
-                if (desktopContainer) {
-                    desktopContainer.style.display = 'block';
-                }
-                if (accordionContainer) {
-                    accordionContainer.style.display = 'none';
-                }
-            } else {
-                if (desktopContainer) {
-                    desktopContainer.style.display = 'none';
-                }
-                if (accordionContainer) {
-                    accordionContainer.style.display = 'block';
-                }
-            }
-        }
-
-        toggleDisplayBasedOnWidth();
-        window.addEventListener('resize', toggleDisplayBasedOnWidth);
-
         const accordionButtons = document.querySelectorAll('[data-accordion-target]');
         
         accordionButtons.forEach(button => {
