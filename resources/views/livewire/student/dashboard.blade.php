@@ -10,10 +10,12 @@ new class extends Component {
 
     public int $studentStatus;
     public array $steps = [];
+    public int $currentStatus;
 
     public function mount()
     {
         $this->studentStatus = $this->user->status;
+        $this->currentStatus = $this->studentStatus;
     }
 
     #[On('student-status-updated')]
@@ -41,6 +43,15 @@ new class extends Component {
             });
         ");
     }
+
+    public function goToStep($index)
+    {
+        if($index > $this->studentStatus){
+            $this->dispatch('notify', type: 'error', message: 'Anda belum sampai tahap tersebut!');
+            return;
+        }
+        $this->currentStatus = $index;
+    }
 }; ?>
 
     
@@ -57,26 +68,38 @@ new class extends Component {
                 <div class="flex items-start min-w-max">
 
                     @foreach($steps as $index => $step)
+                    <button wire:click="goToStep({{ $index }})" class="focus:outline-none">
                         <div class="flex flex-col items-center w-16 flex-shrink-0" wire:key="step-{{ $index }}-{{ $studentStatus }}">
+                                @if($index < $currentStatus)
+                                    <div class="w-7 h-7 bg-green-500 border-2 border-green-500 rounded-full flex items-center justify-center z-10">
+                                        <svg class="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M5 13l4 4L19 7"></path>
+                                        </svg>
+                                    </div>
+                                    <p class="mt-2 text-xs sm:text-sm font-medium text-gray-700 text-center">{{ $step }}</p>
 
-                            @if($index < $studentStatus)
-                                <div class="w-7 h-7 bg-green-500 border-2 border-green-500 rounded-full flex items-center justify-center z-10">
-                                    <svg class="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M5 13l4 4L19 7"></path>
-                                    </svg>
-                                </div>
-                                <p class="mt-2 text-xs sm:text-sm font-medium text-gray-700 text-center">{{ $step }}</p>
+                                @elseif($index == $currentStatus)
+                                    <div class="w-7 h-7 bg-black border-2 border-black rounded-full z-10"></div>
+                                    <p class="mt-2 text-xs sm:text-sm font-medium text-gray-700 text-center">{{ $step }}</p>
+                                
+                                @elseif($index > $currentStatus && $index < $studentStatus)
+                                    <div class="w-7 h-7 bg-green-500 border-2 border-green-500 rounded-full flex items-center justify-center z-10">
+                                        <svg class="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M5 13l4 4L19 7"></path>
+                                        </svg>
+                                    </div>
+                                    <p class="mt-2 text-xs sm:text-sm font-medium text-gray-700 text-center">{{ $step }}</p>
 
-                            @elseif($index == $studentStatus)
-                                <div class="w-7 h-7 bg-black border-2 border-black rounded-full z-10"></div>
-                                <p class="mt-2 text-xs sm:text-sm font-medium text-gray-700 text-center">{{ $step }}</p>
+                                @elseif($index == $studentStatus)
+                                    <div class="w-7 h-7 bg-yellow-500 border-2 border-black rounded-full z-10"></div>
+                                    <p class="mt-2 text-xs sm:text-sm font-medium text-gray-700 text-center">{{ $step }}</p>
 
-                            @else
-                                <div class="w-7 h-7 bg-white border-2 border-gray-300 rounded-full z-10"></div>
-                                <p class="mt-2 text-xs sm:text-sm text-gray-500 text-center">{{ $step }}</p>
-                            @endif
-
-                        </div>
+                                @else
+                                    <div class="w-7 h-7 bg-white border-2 border-gray-300 rounded-full z-10"></div>
+                                    <p class="mt-2 text-xs sm:text-sm text-gray-500 text-center">{{ $step }}</p>
+                                @endif
+                            </div>
+                        </button>
 
                         @if(!$loop->last)
                             <div class="flex-auto border-t-2 {{ $index < $studentStatus ? 'border-green-500' : 'border-gray-300' }} mx-2 mt-3">
@@ -86,15 +109,18 @@ new class extends Component {
                 </div>
             </div>
 
-            {{-- @livewire('student.submit-title') --}}
-            @livewire('student.submit-dosbing')
-            {{-- @livewire('student.upload-proposal') --}}
+            @if($currentStatus == 0)
+                @livewire('student.submit-title')
+            @elseif($currentStatus == 1)
+                @livewire('student.submit-dosbing')
+            @elseif($currentStatus == 2)
+                @livewire('student.upload-proposal')
+            @endif
         </div> {{-- End Desktop Container --}}
 
 
-        <div class="mb-8 sm:mb-10" 
-             id="mobile-accordion-container" 
-             style="display: none;">
+        <div class="mb-8 sm:mb-10 md:hidden" 
+             id="mobile-accordion-container">
             <h3 class="font-medium text-gray-600 mb-4 text-sm sm:text-base">Your Progress</h3>
             <div id="progress-accordion">
 
@@ -104,7 +130,7 @@ new class extends Component {
                             class="w-full py-3 px-1 text-left font-medium text-sm focus:outline-none flex items-center justify-between
                             {{ $index < $studentStatus ? 'text-green-600 bg-green-50 hover:bg-green-100' : ($index == $studentStatus ? 'text-black bg-gray-100 hover:bg-gray-200' : 'text-gray-500 hover:bg-gray-50') }}"
                             data-accordion-target="#accordion-body-{{ $index }}"
-                            aria-expanded="{{ $index == $studentStatus ? 'true' : 'false' }}"
+                            aria-expanded="{{ $index == $currentStatus ? 'true' : 'false' }}"
                             aria-controls="accordion-body-{{ $index }}">
                             
                             <div class="flex items-center">
@@ -128,16 +154,16 @@ new class extends Component {
                             style="{{ $index == $studentStatus ? 'max-height: 900px; padding: 10px;' : 'max-height: 0; padding: 0 10px;' }}">
                             
                             <div class="pb-3 pt-1 text-gray-600 text-sm">
-                                
-                                @if($index == $studentStatus)
-                                    {{-- kasih if per step kalau step 0 ya ini nanti kalau step 1 beda lagi, stepnya nanti berubah tiap klik tombol lingkaran --}}
-                                    {{-- @livewire('student.submit-title') --}}
-                                    @livewire('student.submit-dosbing')
-                                    {{-- @livewire('student.upload-proposal') --}}
-                                @elseif($index < $studentStatus)
-                                    <p>Tahap **{{ $step }}** telah diselesaikan.</p>
+                                @if($index <= $studentStatus)
+                                    @if($index == 0)
+                                        @livewire('student.submit-title')
+                                    @elseif($index == 1)
+                                        @livewire('student.submit-dosbing')
+                                    @elseif($index == 2)
+                                        @livewire('student.upload-proposal')
+                                    @endif
                                 @else
-                                    <p>Menunggu tahap **{{ is_int($studentStatus) && isset($steps[$studentStatus]) ? $steps[$studentStatus] : 'sebelumnya' }}** selesai.</p>
+                                    <p>Anda belum sampai tahap ini!</p>
                                 @endif
                                 
                             </div>
