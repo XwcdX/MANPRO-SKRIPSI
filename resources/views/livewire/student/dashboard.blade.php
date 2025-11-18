@@ -117,6 +117,8 @@ new class extends Component {
                 @livewire('student.upload-proposal')
             @elseif($currentStatus == 4)
                 @livewire('student.final-proposal')
+            @elseif($currentStatus == 5)
+                @livewire('student.upload-thesis')
             @endif
         </div> {{-- End Desktop Container --}}
 
@@ -165,6 +167,8 @@ new class extends Component {
                                         @livewire('student.upload-proposal')
                                     @elseif($currentStatus == 4)
                                         @livewire('student.final-proposal')
+                                    @elseif($currentStatus == 5)
+                                        @livewire('student.upload-thesis')
                                     @endif
                                 @else
                                     <p>Anda belum sampai tahap ini!</p>
