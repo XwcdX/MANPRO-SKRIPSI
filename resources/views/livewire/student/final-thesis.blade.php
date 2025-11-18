@@ -15,8 +15,11 @@ new class extends Component {
 
     public function mount()
     {
-        if ($this->user && $this->user->final_thesis_path) {
-            $this->existing_file_url = Storage::url($this->user->final_thesis_path);
+        if ($this->user) {
+            $this->user->refresh();
+            if ($this->user->final_thesis_path) {
+                $this->existing_file_url = Storage::url($this->user->final_thesis_path);
+            }
         }
     }
 
