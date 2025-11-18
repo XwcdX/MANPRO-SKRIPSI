@@ -58,7 +58,7 @@ class SubmissionService
     }
 
     /**
-     * Submit proposal
+     * Submit final proposal
      * 
      * @param string $studentId Student's Id or User Id
      * @param UploadedFile $file
@@ -93,7 +93,48 @@ class SubmissionService
 
             return [
                 'success' => false,
-                'message' => 'Terjadi kesalahan saat menyimpan proposal'
+                'message' => 'Terjadi kesalahan saat menyimpan final proposal'
+            ];
+        }
+    }
+
+    /**
+     * Submit final thesis
+     * 
+     * @param string $studentId Student's Id or User Id
+     * @param UploadedFile $file
+     */
+    public function submitFinalThesis(Student $student, UploadedFile $file)
+    {
+        try {
+            // upload file
+            $path = $this->fileService->upload($file, 'final_thesis', $student, "public");
+
+            // ambil ulang data student
+            $student = $this->crud
+                ->setModel(new Student())
+                ->find($student->id);
+
+            // update path
+            $student->final_thesis_path = $path;
+            $student->save();
+
+            return [
+                'success' => true,
+                'message' => 'Skripsi berhasil disubmit'
+            ];
+
+        } catch (\Throwable $e) {
+
+            Log::error('Gagal submit final skripsi', [
+                'student_id' => $student->id ?? null,
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString()
+            ]);
+
+            return [
+                'success' => false,
+                'message' => 'Terjadi kesalahan saat menyimpan final skripsi'
             ];
         }
     }
