@@ -18,7 +18,7 @@ return new class extends Migration {
             $table->tinyInteger('proposed_role')->comment('0=Supervisor 1, 1=Supervisor 2');
             $table->text('student_notes')->nullable()->comment('Pesan dari mahasiswa kepada dosen');
             $table->text('lecturer_notes')->nullable()->comment('Catatan/alasan dari dosen');
-            $table->enum('status', ['pending', 'accepted', 'declined'])->default('pending');
+            $table->enum('status', ['pending', 'accepted', 'declined', 'canceled'])->default('pending');
             $table->timestamps();
             
             $table->unique(['student_id', 'lecturer_id', 'proposed_role'], 'unique_student_lecturer_application');

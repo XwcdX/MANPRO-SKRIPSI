@@ -22,6 +22,8 @@ new class extends Component {
     public ?string $reason2 = null;
     public ?string $status1 = null;
     public ?string $status2 = null;
+    public bool $editMode1 = false;
+    public bool $editMode2 = false;
 
 
     protected $crud;
@@ -30,7 +32,7 @@ new class extends Component {
     {
         $this->crud = new CrudService();
         $this->user->load([
-            'supervisionApplications' => fn ($q) => $q->where('period_id', $this->user->activePeriod()->id)
+            'supervisionApplications' => fn ($q) => $q->where('period_id', $this->user->activePeriod()->id)->whereNot('status', 'declined')->whereNot('status', 'canceled')
         ]);
         $supervisor = $this->user->supervisionApplications->map(function ($s) {
             return [
@@ -92,8 +94,10 @@ new class extends Component {
         if ($response['success']) {
             if ($dosbing === 0) {
                 $this->status1 = 'pending';
+                $this->editMode1 = false;
             } else {
                 $this->status2 = 'pending';
+                $this->editMode2 = false;
             }
 
             $this->dispatch('notify', type: 'success', message: $response['message']);
@@ -101,6 +105,42 @@ new class extends Component {
             $this->dispatch('notify', type: 'error', message: $response['message']);
         }
     }
+    public function enableEdit($dosbing)
+    {
+        if ($dosbing === 0) {
+            $this->editMode1 = true;
+        } else {
+            $this->editMode2 = true;
+        }
+    }
+
+    public function cancel($dosbing, SubmissionService $service)
+    {
+        // Panggil service cancel jika ada, atau set ulang statusnya saja
+        $lecturerId = $dosbing === 0 ? $this->dosbing1 : $this->dosbing2;
+        $response = $service->cancelSupervisor(
+            studentId: $this->user->id,
+            supervisorId: $lecturerId,
+            role: $dosbing,
+        );
+
+        if ($response['success']) {
+            if ($dosbing === 0) {
+                $this->status1 = null;
+                $this->dosbing1 = null;
+                $this->reason1 = null;
+            } else {
+                $this->status2 = null;
+                $this->dosbing2 = null;
+                $this->reason2 = null;
+            }
+
+            $this->dispatch('notify', type: 'success', message: $response['message']);
+        } else {
+            $this->dispatch('notify', type: 'error', message: $response['message']);
+        }
+    }
+
 };
 ?>
 
@@ -112,7 +152,7 @@ new class extends Component {
         <!-- Dosbing 1 -->
         <div class="flex flex-col space-y-3 sm:space-y-2 sm:flex-row sm:items-start sm:space-x-4">
             <div class="flex flex-col flex-grow space-y-2">
-                <label for="dosbing1" class="w-full text-sm font-medium text-gray-700">Dosbing 1</label>
+                <label for="dosbing1" class="w-full text-sm font-medium text-gray-700">Dosbing 1 {{ $status1 === 'pending' ? '(Pending)' : ($status1 === 'accepted' ? ($editMode1 ? '(Editing)' : '(Accepted)') : '') }}</label>
 
                 <select id="dosbing1"
                     wire:model.live="dosbing1"
@@ -127,31 +167,44 @@ new class extends Component {
                 <!-- Textbox tambahan -->
                 <input type="text"
                     wire:model.defer="reason1"
-                    @disabled($status1 === 'pending' || $status1 === 'accepted')
+                    @disabled($status1 === 'pending' || $status1 === 'accepted' && !$editMode1)
                     placeholder="Tulis alasan pengajuan dosbing 1..."
                     class="bg-white border border-gray-300 rounded-lg p-2.5 text-sm focus:ring focus:ring-gray-200" />
             </div>
 
-            <button
-                wire:click="submit(0)"
-                wire:loading.attr="disabled"
-                wire:target="submit"
-                @disabled($status1 === 'pending' || $status1 === 'accepted')
-                class="px-3 py-1.5 sm:px-6 sm:py-2.5 bg-gray-700 text-white font-medium rounded-lg text-sm sm:text-base transition duration-200 self-end sm:self-center
-                    {{ $status1 === 'pending' || $status1 === 'accepted' ? 'opacity-50 cursor-not-allowed' : 'hover:bg-gray-800' }}"
-            >
-                {{ $status1 === 'pending' ? 'Pending' : ($status1 === 'accepted' ? 'Accepted' : 'Ajukan') }}
-            </button>
+            @if ($status1 === 'pending')
+                <button
+                    wire:click="cancel(0)"
+                    class="px-3 py-1.5 sm:px-6 sm:py-2.5 bg-red-600 hover:bg-red-700 text-white font-medium rounded-lg text-sm sm:text-base self-end sm:self-center">
+                    Cancel
+                </button>
+
+            @elseif ($status1 === 'accepted' && !$editMode1)
+                <button
+                    wire:click="enableEdit(0)"
+                    class="px-3 py-1.5 sm:px-6 sm:py-2.5 bg-green-600 hover:bg-green-700 text-white font-medium rounded-lg text-sm sm:text-base self-end sm:self-center">
+                    Change
+                </button>
+
+            @else
+                <button
+                    wire:click="submit(0)"
+                    wire:loading.attr="disabled"
+                    class="px-3 py-1.5 sm:px-6 sm:py-2.5 bg-gray-700 text-white font-medium rounded-lg text-sm sm:text-base hover:bg-gray-800 self-end sm:self-center">
+                    Ajukan
+                </button>
+            @endif
+
         </div>
 
         <!-- Dosbing 2 -->
         <div class="flex flex-col space-y-3 sm:space-y-2 sm:flex-row sm:items-start sm:space-x-4">
             <div class="flex flex-col flex-grow space-y-2">
-                <label for="dosbing2" class="w-full text-sm font-medium text-gray-700">Dosbing 2</label>
+                <label for="dosbing2" class="w-full text-sm font-medium text-gray-700">Dosbing 2 {{ $status2 === 'pending' ? '(Pending)' : ($status2 === 'accepted' ? ($editMode2 ? '(Editing)' : '(Accepted)') : '') }}</label>
 
                 <select id="dosbing2"
                     wire:model.live="dosbing2"
-                    @disabled($status2 === 'pending' || $status2 === 'accepted')
+                    @disabled($status2 === 'pending' || $status2 === 'accepted' && !$editMode2)
                     class="bg-gray-100 border border-gray-300 rounded-lg p-2.5 text-sm">
                     <option value="">Pilih dosen...</option>
                     @foreach ($lecturers2 as $id => $name)
@@ -162,21 +215,34 @@ new class extends Component {
                 <!-- Textbox tambahan -->
                 <input type="text"
                     wire:model.defer="reason2"
-                    @disabled($status2 === 'pending' || $status2 === 'accepted')
+                    @disabled($status2 === 'pending' || $status2 === 'accepted' && !$editMode2)
                     placeholder="Tulis alasan pengajuan dosbing 2..."
                     class="bg-white border border-gray-300 rounded-lg p-2.5 text-sm focus:ring focus:ring-gray-200" />
             </div>
 
-            <button
-                wire:click="submit(1)"
-                wire:loading.attr="disabled"
-                wire:target="submit"
-                @disabled($status2 === 'pending' || $status2 === 'accepted')
-                class="px-3 py-1.5 sm:px-6 sm:py-2.5 bg-gray-700 text-white font-medium rounded-lg text-sm sm:text-base transition duration-200 self-end sm:self-center
-                    {{ $status2 === 'pending' || $status2 === 'accepted' ? 'opacity-50 cursor-not-allowed' : 'hover:bg-gray-800' }}"
-            >
-                {{ $status2 === 'pending' ? 'Pending' : ($status2 === 'accepted' ? 'Accepted' : 'Ajukan') }}
-            </button>
+            @if ($status2 === 'pending')
+                <button
+                    wire:click="cancel(1)"
+                    class="px-3 py-1.5 sm:px-6 sm:py-2.5 bg-red-600 hover:bg-red-700 text-white font-medium rounded-lg text-sm sm:text-base self-end sm:self-center">
+                    Cancel
+                </button>
+
+            @elseif ($status2 === 'accepted' && !$editMode2)
+                <button
+                    wire:click="enableEdit(1)"
+                    class="px-3 py-1.5 sm:px-6 sm:py-2.5 bg-green-600 hover:bg-green-700 text-white font-medium rounded-lg text-sm sm:text-base self-end sm:self-center">
+                    Change
+                </button>
+
+            @else
+                <button
+                    wire:click="submit(1)"
+                    wire:loading.attr="disabled"
+                    class="px-3 py-1.5 sm:px-6 sm:py-2.5 bg-gray-700 text-white font-medium rounded-lg text-sm sm:text-base hover:bg-gray-800 self-end sm:self-center">
+                    Ajukan
+                </button>
+            @endif
+
         </div>
 
     </div>

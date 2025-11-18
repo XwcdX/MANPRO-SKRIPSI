@@ -111,7 +111,7 @@ class SubmissionService
      * @param string $note
      * @param string|null $divisionId
      */
-    public function assignSupervisor(string $studentId, string $supervisorId, int $role, string $note): array
+    public function assignSupervisor(string $studentId, string $supervisorId, int $role, string $note = null): array
     {
         try {
             $student = $this->crud->setModel(new Student())->find($studentId);
@@ -133,19 +133,25 @@ class SubmissionService
                 ->where('lecturer_id', $lecturer->id)
                 ->where('proposed_role', $role)
                 ->where('period_id', $period->id)
-                ->exists();
+                ->first();
 
             if ($exists) {
-                throw new \Exception('Pengajuan sudah pernah dibuat sebelumnya');
-            }
+                if($exists->status == "accepted" or $exists->status == "pending"){
+                    throw new \Exception('Pengajuan sudah pernah dibuat sebelumnya');
+                }
 
-            $this->crud->setModel(new SupervisionApplication())->create([
-                'period_id' => $period->id,
-                'lecturer_id' => $lecturer->id,
-                'student_id' => $student->id,
-                'proposed_role' => $role,
-                'student_notes' => $note,
-            ]);
+                $exists->status = "pending";
+                $exists->save();
+            }
+            else{
+                $this->crud->setModel(new SupervisionApplication())->create([
+                    'period_id' => $period->id,
+                    'lecturer_id' => $lecturer->id,
+                    'student_id' => $student->id,
+                    'proposed_role' => $role,
+                    'student_notes' => $note,
+                ]);
+            }
 
             return [
                 'success' => true,
@@ -154,6 +160,57 @@ class SubmissionService
 
         } catch (\Throwable $e) {
             \Log::error('Gagal assign supervisor: ' . $e->getMessage(), [
+                'student_id' => $studentId,
+                'supervisor_id' => $supervisorId,
+                'error' => $e->getMessage()
+            ]);
+            return [
+                'success' => false,
+                'message' => $e->getMessage()
+            ];
+        }
+    }
+
+    public function cancelSupervisor(string $studentId, string $supervisorId, int $role): array
+    {
+        try {
+            $student = $this->crud->setModel(new Student())->find($studentId);
+            $lecturer = $this->crud->setModel(new Lecturer())->find($supervisorId);
+
+            if (!$student || !$lecturer) {
+                throw new \Exception('Data mahasiswa atau dosen tidak ditemukan.');
+            }
+
+            $period = $student->periods()
+                ->wherePivot('is_active', true)
+                ->first();
+
+            if (!$period) {
+                throw new \Exception('Tidak ada periode aktif saat ini.');
+            }
+
+            $exists = SupervisionApplication::where('student_id', $student->id)
+                ->where('lecturer_id', $lecturer->id)
+                ->where('proposed_role', $role)
+                ->where('period_id', $period->id)
+                ->where('status', 'pending')
+                ->first();
+
+            if (!$exists) {
+                throw new \Exception('Pengajuan tidak ditemukan');
+            }
+
+            $exists->status='canceled';
+            $exists->save();
+
+
+            return [
+                'success' => true,
+                'message' => 'Pembatalan berhasil'
+            ];
+
+        } catch (\Throwable $e) {
+            \Log::error('Gagal melakukan pembatalan supervisor: ' . $e->getMessage(), [
                 'student_id' => $studentId,
                 'supervisor_id' => $supervisorId,
                 'error' => $e->getMessage()
