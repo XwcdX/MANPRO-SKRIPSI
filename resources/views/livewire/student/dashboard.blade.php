@@ -115,6 +115,8 @@ new class extends Component {
                 @livewire('student.submit-dosbing')
             @elseif($currentStatus == 2)
                 @livewire('student.upload-proposal')
+            @elseif($currentStatus == 4)
+                @livewire('student.final-proposal')
             @endif
         </div> {{-- End Desktop Container --}}
 
@@ -155,12 +157,14 @@ new class extends Component {
                             
                             <div class="pb-3 pt-1 text-gray-600 text-sm">
                                 @if($index <= $studentStatus)
-                                    @if($index == 0)
+                                    @if($currentStatus == 0)
                                         @livewire('student.submit-title')
-                                    @elseif($index == 1)
+                                    @elseif($currentStatus == 1)
                                         @livewire('student.submit-dosbing')
-                                    @elseif($index == 2)
+                                    @elseif($currentStatus == 2)
                                         @livewire('student.upload-proposal')
+                                    @elseif($currentStatus == 4)
+                                        @livewire('student.final-proposal')
                                     @endif
                                 @else
                                     <p>Anda belum sampai tahap ini!</p>
