@@ -28,14 +28,12 @@ new class extends Component {
         }
 
         // panggil service
-        $success = $service->submitTitle($this->user->id, $this->title, $this->description);
+        $response = $service->submitTitle($this->user->id, $this->title, $this->description);
 
-        if ($success) {
-            $this->status = 1;
-            $this->dispatch('student-status-updated', status: 1);
-            $this->dispatch('notify', type: 'success', message: 'Judul berhasil disubmit.');
+        if ($response['success']) {
+            $this->dispatch('notify', type: 'success', message: $response['message']);
         } else {
-            $this->dispatch('notify', type: 'error', message: 'Judul tidak valid atau sudah dipakai.');
+            $this->dispatch('notify', type: 'error', message: $response['message']);
         }
     }
 };

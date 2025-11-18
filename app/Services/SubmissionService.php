@@ -44,15 +44,15 @@ class SubmissionService
      * @param string $studentNrp Student's Id or User Id
      * @param string $title Thesis title
      */
-    public function submitTitle(string $studentId, string $title, string $description): bool
+    public function submitTitle(string $studentId, string $title, string $description): array
     {
         try {
             // Pastikan data tidak kosong
-            if (trim($title) === '' || trim($description) === '') {
-                \Log::warning("Submit title gagal: judul atau deskripsi kosong", [
+            if (trim($title) === '') {
+                \Log::warning("Submit title gagal: judul kosong", [
                     'student_id' => $studentId,
                 ]);
-                return false;
+                throw new \Exception('Judul tidak boleh kosong!');
             }
 
             // Validasi khusus judul (misalnya sudah dipakai atau tidak)
@@ -61,14 +61,18 @@ class SubmissionService
                     'student_id' => $studentId,
                     'title' => $title,
                 ]);
-                return false;
+                throw new \Exception('Judul memiliki kemiripan diatas 70% dengan judul terdahulu!');
             }
+
+            $student = $this->crud
+                ->setModel(new Student())
+                ->find($studentId);
 
             // Update data mahasiswa
             $this->crud
                 ->setModel(new Student())
                 ->update($studentId, [
-                    'status' => 1,
+                    'status' => $student->status == 0 ? 1 : $student->status,
                     'thesis_title' => $title,
                     'thesis_description' => $description,
                 ]);
@@ -78,7 +82,10 @@ class SubmissionService
                 'title' => $title,
             ]);
 
-            return true;
+            return [
+                'success' => true,
+                'message' => 'Judul berhasil disubmit.'
+            ];
 
         } catch (\Throwable $e) {
             \Log::error("Error saat submit title: {$e->getMessage()}", [
@@ -87,7 +94,10 @@ class SubmissionService
                 'trace' => $e->getTraceAsString(),
             ]);
 
-            return false;
+            return [
+                'success' => false,
+                'message' => $e->getMessage()
+            ];
         }
     }
 

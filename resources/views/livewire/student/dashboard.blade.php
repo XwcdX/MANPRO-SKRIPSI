@@ -68,7 +68,7 @@ new class extends Component {
                 <div class="flex items-start min-w-max">
 
                     @foreach($steps as $index => $step)
-                    <button wire:click="goToStep({{ $index }})" class="focus:outline-none">
+                    <button wire:click="goToStep({{ $index }})" class="focus:outline-none cursor-pointer">
                         <div class="flex flex-col items-center w-16 flex-shrink-0" wire:key="step-{{ $index }}-{{ $studentStatus }}">
                                 @if($index < $currentStatus)
                                     <div class="w-7 h-7 bg-green-500 border-2 border-green-500 rounded-full flex items-center justify-center z-10">
