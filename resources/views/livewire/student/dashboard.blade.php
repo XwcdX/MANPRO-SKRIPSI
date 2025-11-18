@@ -161,17 +161,17 @@ new class extends Component {
                             
                             <div class="pb-3 pt-1 text-gray-600 text-sm">
                                 @if($index <= $studentStatus)
-                                    @if($currentStatus == 0)
+                                    @if($index == 0)
                                         @livewire('student.submit-title')
-                                    @elseif($currentStatus == 1)
+                                    @elseif($index == 1)
                                         @livewire('student.submit-dosbing')
-                                    @elseif($currentStatus == 2)
+                                    @elseif($index == 2)
                                         @livewire('student.upload-proposal')
-                                    @elseif($currentStatus == 4)
+                                    @elseif($index == 4)
                                         @livewire('student.final-proposal')
-                                    @elseif($currentStatus == 5)
+                                    @elseif($index == 5)
                                         @livewire('student.upload-thesis')
-                                    @elseif($currentStatus == 7)
+                                    @elseif($index == 7)
                                         @livewire('student.final-thesis')
                                     @endif
                                 @else
