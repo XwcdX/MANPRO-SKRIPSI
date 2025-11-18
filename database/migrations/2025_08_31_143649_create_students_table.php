@@ -23,6 +23,7 @@ return new class extends Migration {
             $table->text('head_division_comment')->nullable();
             $table->text('revision_notes')->nullable();
             $table->string('final_thesis_path', 500)->nullable();
+            $table->string('final_proposal_path', 500)->nullable();
             $table->date('due_date')->nullable();
             $table->boolean('is_active')->default(true);
             $table->timestamps();

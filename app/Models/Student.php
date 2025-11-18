@@ -28,6 +28,7 @@ class Student extends Authenticatable implements MustVerifyEmail
         'head_division_comment',
         'revision_notes',
         'final_thesis_path',
+        'final_proposal_path',
         'due_date',
         'is_active',
     ];
@@ -59,6 +60,18 @@ class Student extends Authenticatable implements MustVerifyEmail
     public function thesisPresentations()
     {
         return $this->hasMany(ThesisPresentation::class);
+    }
+
+    public function proposalPresentations()
+    {
+        return $this->hasMany(ThesisPresentation::class)
+            ->where('presentation_type', 'proposal');
+    }
+
+    public function finalPresentations()
+    {
+        return $this->hasMany(ThesisPresentation::class)
+            ->where('presentation_type', 'final');
     }
 
     public function statusHistory()

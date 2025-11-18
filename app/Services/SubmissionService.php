@@ -41,6 +41,47 @@ class SubmissionService
     /**
      * Submit proposal
      * 
+     * @param string $studentId Student's Id or User Id
+     * @param UploadedFile $file
+     */
+    public function submitFinalProposal(Student $student, UploadedFile $file)
+    {
+        try {
+            // upload file
+            $path = $this->fileService->upload($file, 'final_proposal', $student, "public");
+
+            // ambil ulang data student
+            $student = $this->crud
+                ->setModel(new Student())
+                ->find($student->id);
+
+            // update path
+            $student->final_proposal_path = $path;
+            $student->save();
+
+            return [
+                'success' => true,
+                'message' => 'Proposal berhasil disubmit'
+            ];
+
+        } catch (\Throwable $e) {
+
+            Log::error('Gagal submit final proposal', [
+                'student_id' => $student->id ?? null,
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString()
+            ]);
+
+            return [
+                'success' => false,
+                'message' => 'Terjadi kesalahan saat menyimpan proposal'
+            ];
+        }
+    }
+
+    /**
+     * Submit proposal
+     * 
      * @param string $studentNrp Student's Id or User Id
      * @param string $title Thesis title
      */
