@@ -130,6 +130,18 @@ class SubmissionService
             }
 
             $exists = SupervisionApplication::where('student_id', $student->id)
+                ->whereNot('lecturer_id', $lecturer->id)
+                ->where('proposed_role', $role)
+                ->where('period_id', $period->id)
+                ->where('status', 'accepted')
+                ->first();
+
+            if($exists){
+                $exists->status = 'changed';
+                $exists->save();
+            }
+
+            $exists = SupervisionApplication::where('student_id', $student->id)
                 ->where('lecturer_id', $lecturer->id)
                 ->where('proposed_role', $role)
                 ->where('period_id', $period->id)
