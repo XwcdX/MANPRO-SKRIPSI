@@ -14,6 +14,7 @@ Route::middleware('guest:student,lecturer')->group(function () {
 Route::middleware(['auth:student', 'verified'])->name('student.')->group(function () {
     Route::middleware(['have_period'])->group(function () {
         Volt::route('dashboard', 'student.dashboard')->name('dashboard');
+        Volt::route('choose-topic', 'student.choose-topic')->name('choose-topic');
     });
 
     Volt::route('apply-period', 'student.apply-period')->name('apply-period');

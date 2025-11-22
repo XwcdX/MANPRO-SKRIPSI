@@ -11,8 +11,8 @@
     >
         <div class="px-4 py-2 text-2xl font-semibold border-b border-gray-700"><img src="{{ asset('assets/logopcuputih.png') }}" alt="logopcuputih"></div>
         <nav class="flex-1 px-4 py-6 space-y-2">
-            <a href="/" class="flex items-center px-4 py-2.5 hover:bg-gray-700 rounded-lg font-medium">Dashboard</a>
-            <a href="/" class="flex items-center px-4 py-2.5 hover:bg-gray-700 rounded-lg">Topik Dosen</a>
+            <a href="{{ route('student.dashboard') }}" class="flex items-center px-4 py-2.5 hover:bg-gray-700 rounded-lg font-medium">Dashboard</a>
+            <a href="{{ route('student.choose-topic') }}" class="flex items-center px-4 py-2.5 hover:bg-gray-700 rounded-lg">Topik Dosen</a>
         </nav>
         <div class="px-4 py-6 border-t border-gray-700">
             <form method="POST" action="{{ route('logout') }}">
