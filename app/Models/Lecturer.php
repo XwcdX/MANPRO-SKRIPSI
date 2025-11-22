@@ -99,6 +99,11 @@ class Lecturer extends Authenticatable implements MustVerifyEmail
         return $this->hasMany(LecturerTopic::class);
     }
 
+    public function topicApplications()
+    {
+        return $this->hasMany(TopicApplication::class);
+    }
+
     public function getAvailableCapacityForPeriod($periodId)
     {
         $period = Period::find($periodId);

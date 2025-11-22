@@ -32,4 +32,14 @@ class LecturerTopic extends Model
     {
         return $this->belongsTo(Period::class);
     }
+
+    public function applications()
+    {
+        return $this->hasMany(TopicApplication::class, 'topic_id');
+    }
+
+    public function acceptedApplications()
+    {
+        return $this->hasMany(TopicApplication::class, 'topic_id')->where('status', 'accepted');
+    }
 }

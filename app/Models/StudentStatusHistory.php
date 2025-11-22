@@ -16,6 +16,7 @@ class StudentStatusHistory extends Model
     
     protected $fillable = [
         'student_id',
+        'period_id',
         'previous_status',
         'new_status',
         'changed_by',

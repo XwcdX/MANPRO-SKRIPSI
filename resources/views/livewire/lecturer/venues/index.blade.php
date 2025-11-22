@@ -4,10 +4,18 @@ use Livewire\Attributes\Layout;
 use Livewire\Volt\Component;
 use Livewire\WithPagination;
 use App\Models\PresentationVenue;
+use App\Services\VenueService;
 
 new #[Layout('components.layouts.lecturer')] 
 class extends Component {
     use WithPagination;
+
+    protected VenueService $venueService;
+
+    public function boot(VenueService $venueService): void
+    {
+        $this->venueService = $venueService;
+    }
 
     public bool $showModal = false;
     public bool $showDeleteModal = false;
@@ -62,13 +70,16 @@ class extends Component {
             'location' => 'required|string|max:255',
         ]);
 
-        if (!$this->editing) {
-            $this->editing = new PresentationVenue();
-        }
+        $data = [
+            'name' => $this->name,
+            'location' => $this->location,
+        ];
 
-        $this->editing->name = $this->name;
-        $this->editing->location = $this->location;
-        $this->editing->save();
+        if ($this->editing && $this->editing->exists) {
+            $this->venueService->updateVenue($this->editing, $data);
+        } else {
+            $this->venueService->createVenue($data);
+        }
 
         session()->flash('success', 'Venue saved successfully.');
         $this->showModal = false;
@@ -83,9 +94,8 @@ class extends Component {
 
     public function deleteVenue(): void
     {
-        $venue = PresentationVenue::find($this->deletingId);
-        if ($venue) {
-            $venue->delete();
+        if ($this->deletingId) {
+            $this->venueService->deleteVenue($this->deletingId);
             session()->flash('success', 'Venue deleted successfully.');
         }
         $this->showDeleteModal = false;

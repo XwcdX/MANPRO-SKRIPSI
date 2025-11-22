@@ -123,15 +123,7 @@ new #[Layout('components.layouts.lecturer')] class extends Component {
         session()->flash('success', 'Topic deleted successfully.');
     }
 
-    public function toggleAvailability(LecturerTopic $topic): void
-    {
-        if ($topic->lecturer_id !== auth()->id()) {
-            abort(403);
-        }
 
-        app(TopicService::class)->toggleAvailability($topic);
-        session()->flash('success', 'Topic availability updated.');
-    }
 
     private function resetInput(): void
     {
@@ -242,10 +234,6 @@ new #[Layout('components.layouts.lecturer')] class extends Component {
                                 </td>
                                 <td class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
                                     <div class="flex justify-end items-center gap-2">
-                                        <flux:button wire:click="toggleAvailability('{{ $topicItem->id }}')"
-                                            variant="ghost" size="sm" class="cursor-pointer">
-                                            {{ $topicItem->is_available ? 'Disable' : 'Enable' }}
-                                        </flux:button>
                                         <flux:button wire:click="edit('{{ $topicItem->id }}')" variant="ghost"
                                             size="sm" class="cursor-pointer">
                                             Edit

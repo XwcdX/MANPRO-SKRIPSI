@@ -3,6 +3,7 @@
 use function Livewire\Volt\{state, layout, rules, with, uses};
 use Livewire\WithPagination;
 use App\Models\Period;
+use App\Services\PeriodService;
 use Illuminate\Validation\Rule;
 use Carbon\Carbon;
 
@@ -53,14 +54,7 @@ with(
     ],
 );
 
-$archivePeriod = function (Period $period) {
-    $period->is_active = false;
-    $period->status = 'archived';
-    $period->save();
 
-    session()->flash('success', "Period '{$period->name}' has been archived.");
-    $this->resetPage();
-};
 
 $updatingSearch = fn() => $this->resetPage();
 
@@ -69,13 +63,10 @@ $confirmArchive = function ($periodId) {
     $this->showArchiveConfirmModal = true;
 };
 
-$archivePeriod = function () {
+$archivePeriod = function (PeriodService $service) {
     if ($this->archivingPeriodId) {
-        $period = Period::find($this->archivingPeriodId);
-        if ($period) {
-            $period->archive();
-            session()->flash('success', "Period '{$period->name}' has been archived.");
-        }
+        $service->archivePeriod($this->archivingPeriodId);
+        session()->flash('success', 'Period has been archived.');
     }
     $this->showArchiveConfirmModal = false;
     $this->resetPage();
@@ -113,11 +104,8 @@ $edit = function (Period $period) {
     $this->showModal = true;
 };
 
-$save = function () {
+$save = function (PeriodService $service) {
     $this->validate();
-    if (!$this->editing) {
-        $this->editing = new Period();
-    }
     $data = $this->only(['name', 'start_date', 'end_date', 'registration_end', 'proposal_hearing_start', 'proposal_hearing_end', 'thesis_start', 'thesis_end', 'schedule_start_time', 'schedule_end_time', 'default_quota']);
 
     foreach (['proposal_hearing_start', 'proposal_hearing_end', 'thesis_start', 'thesis_end'] as $field) {
@@ -126,15 +114,18 @@ $save = function () {
         }
     }
 
-    $this->editing->fill($data);
-    $this->editing->save();
+    if ($this->editing && $this->editing->exists) {
+        $service->updatePeriod($this->editing, $data);
+    } else {
+        $service->createPeriod($data);
+    }
     session()->flash('success', 'Period saved successfully.');
     $this->showModal = false;
     $this->resetPage();
 };
 
-$deletePeriod = function (Period $period) {
-    $period->delete();
+$deletePeriod = function (Period $period, PeriodService $service) {
+    $service->deletePeriod($period->id);
     session()->flash('success', 'Period deleted successfully.');
 };
 

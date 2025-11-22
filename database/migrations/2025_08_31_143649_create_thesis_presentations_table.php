@@ -12,10 +12,13 @@ return new class extends Migration {
     {
         Schema::create('thesis_presentations', function (Blueprint $table) {
             $table->uuid('id')->primary();
+            $table->foreignUuid('period_id')->constrained('periods')->onDelete('restrict');
+            $table->date('presentation_date');
+            $table->time('start_time');
+            $table->time('end_time');
             $table->foreignUuid('venue_id')->constrained('presentation_venues')->onDelete('restrict');
-            $table->uuid('schedule_id')->nullable(); //change later :)
             $table->foreignUuid('student_id')->constrained('students')->onDelete('restrict');
-            $table->enum('presentation_type', ['proposal', 'final'])->default('final');
+            $table->enum('presentation_type', ['proposal', 'thesis'])->default('proposal');
             $table->text('notes')->nullable();
             $table->timestamps();
         });

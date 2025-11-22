@@ -6,11 +6,10 @@ use Livewire\WithFileUploads;
 use Livewire\WithPagination;
 use App\Models\Lecturer;
 use App\Models\Division;
-use App\Services\CrudService;
+use App\Services\LecturerService;
 use Maatwebsite\Excel\Facades\Excel;
 use App\Imports\LecturersImport;
 use App\Exports\LecturersExport;
-use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\Rule;
 use Illuminate\Validation\Rules\Password;
@@ -40,11 +39,11 @@ class extends Component {
 
     public $upload;
 
-    protected CrudService $crudService;
+    protected LecturerService $lecturerService;
 
-    public function boot(CrudService $crudService): void
+    public function boot(LecturerService $lecturerService): void
     {
-        $this->crudService = $crudService->setModel(new Lecturer());
+        $this->lecturerService = $lecturerService;
     }
 
     public function mount(): void
@@ -154,23 +153,23 @@ class extends Component {
     {
         $this->validate();
 
-        if (!$this->editing) {
-            $this->editing = new Lecturer();
-        }
-
-        $this->editing->name = $this->name;
-        $this->editing->email = $this->email;
-        $this->editing->primary_division_id = $this->primary_division_id ?: null;
-        $this->editing->is_active = $this->is_active;
+        $data = [
+            'name' => $this->name,
+            'email' => $this->email,
+            'primary_division_id' => $this->primary_division_id ?: null,
+            'is_active' => $this->is_active,
+            'divisions' => $this->selected_divisions,
+        ];
 
         if (!empty($this->password)) {
-            $this->editing->password = Hash::make($this->password);
+            $data['password'] = $this->password;
         }
 
-        $this->editing->save();
-        
-        // Sync divisions
-        $this->editing->divisions()->sync($this->selected_divisions);
+        if ($this->editing && $this->editing->exists) {
+            $this->lecturerService->updateLecturer($this->editing, $data);
+        } else {
+            $this->lecturerService->createLecturer($data);
+        }
 
         session()->flash('success', 'Lecturer saved successfully.');
         $this->showModal = false;
@@ -213,9 +212,8 @@ class extends Component {
 
     public function deleteLecturer(): void
     {
-        $lecturer = Lecturer::find($this->deletingId);
-        if ($lecturer) {
-            $lecturer->delete();
+        if ($this->deletingId) {
+            $this->lecturerService->deleteLecturer($this->deletingId);
             session()->flash('success', 'Lecturer deleted successfully.');
         }
         $this->showDeleteModal = false;

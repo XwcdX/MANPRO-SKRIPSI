@@ -5,7 +5,7 @@ use Livewire\Volt\Component;
 use Livewire\WithPagination;
 use App\Models\Lecturer;
 use App\Models\Division;
-use Illuminate\Support\Facades\DB;
+use App\Services\LecturerService;
 
 new #[Layout('components.layouts.lecturer')] 
 class extends Component {
@@ -61,17 +61,15 @@ class extends Component {
             'primary_division_id' => 'nullable|uuid|exists:divisions,id',
         ]);
 
-        if ($this->primary_division_id && !in_array($this->primary_division_id, $this->selected_divisions)) {
-            session()->flash('error', 'Primary division must be one of the selected divisions.');
-            return;
+        $service = app(LecturerService::class);
+        $result = $service->assignDivisions($this->editing, $this->selected_divisions, $this->primary_division_id);
+
+        session()->flash($result['success'] ? 'success' : 'error', $result['message']);
+        
+        if ($result['success']) {
+            $this->showModal = false;
+            $this->resetPage();
         }
-
-        $this->editing->divisions()->sync($this->selected_divisions);
-        $this->editing->update(['primary_division_id' => $this->primary_division_id]);
-
-        session()->flash('success', 'Divisions assigned successfully.');
-        $this->showModal = false;
-        $this->resetPage();
     }
 };
 

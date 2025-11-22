@@ -17,17 +17,8 @@ class PermissionSeeder extends Seeder
         $guardName = 'lecturer';
 
         $permissions = [
-            // Student management
-            'view-students', 'edit-student-status',
-            
-            // Thesis & Topics
-            'approve-thesis-title', 'offer-topics',
-            
-            // Schedule management
-            'set-availability',
-            
-            // System administration (superadmin only)
             'administrate',
+            'offer-topics',
         ];
 
         foreach ($permissions as $permissionName) {

@@ -1,3 +1,10 @@
+<!DOCTYPE html>
+<html lang="{{ str_replace('_', '-', app()->getLocale()) }}">
+<head>
+    @include('partials.head')
+</head>
+<body>
+
 @php
     use Illuminate\Support\Facades\Auth;
 
@@ -11,8 +18,8 @@
     >
         <div class="px-4 py-2 text-2xl font-semibold border-b border-gray-700"><img src="{{ asset('assets/logopcuputih.png') }}" alt="logopcuputih"></div>
         <nav class="flex-1 px-4 py-6 space-y-2">
-            <a href="/" class="flex items-center px-4 py-2.5 hover:bg-gray-700 rounded-lg font-medium">Dashboard</a>
-            <a href="/" class="flex items-center px-4 py-2.5 hover:bg-gray-700 rounded-lg">Topik Dosen</a>
+            <a href="{{ route('student.dashboard') }}" class="flex items-center px-4 py-2.5 hover:bg-gray-700 rounded-lg font-medium" wire:navigate>Dashboard</a>
+            <a href="{{ route('student.topics.browse') }}" class="flex items-center px-4 py-2.5 hover:bg-gray-700 rounded-lg" wire:navigate>Topik Dosen</a>
         </nav>
         <div class="px-4 py-6 border-t border-gray-700">
             <form method="POST" action="{{ route('logout') }}">
@@ -49,27 +56,33 @@
 </div>
 
 <script>
-    const sidebar = document.getElementById('sidebar');
-    const hamburger = document.getElementById('hamburger');
-    const blurOverlay = document.getElementById('blurOverlay');
+    document.addEventListener('DOMContentLoaded', function() {
+        const sidebarEl = document.getElementById('sidebar');
+        const hamburgerEl = document.getElementById('hamburger');
+        const blurOverlayEl = document.getElementById('blurOverlay');
 
-    function openSidebar() {
-        sidebar.classList.remove('-translate-x-full');
-        blurOverlay.classList.remove('hidden');
-    }
-
-    function closeSidebar() {
-        sidebar.classList.add('-translate-x-full');
-        blurOverlay.classList.add('hidden');
-    }
-
-    hamburger.addEventListener('click', () => {
-        if (sidebar.classList.contains('-translate-x-full')) {
-            openSidebar();
-        } else {
-            closeSidebar();
+        function openSidebar() {
+            sidebarEl.classList.remove('-translate-x-full');
+            blurOverlayEl.classList.remove('hidden');
         }
-    });
 
-    blurOverlay.addEventListener('click', closeSidebar);
+        function closeSidebar() {
+            sidebarEl.classList.add('-translate-x-full');
+            blurOverlayEl.classList.add('hidden');
+        }
+
+        hamburgerEl.addEventListener('click', () => {
+            if (sidebarEl.classList.contains('-translate-x-full')) {
+                openSidebar();
+            } else {
+                closeSidebar();
+            }
+        });
+
+        blurOverlayEl.addEventListener('click', closeSidebar);
+    });
 </script>
+
+@livewireScripts
+</body>
+</html>

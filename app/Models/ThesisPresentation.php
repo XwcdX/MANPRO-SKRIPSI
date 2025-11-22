@@ -14,11 +14,18 @@ class ThesisPresentation extends Model
     public $incrementing = false;
 
     protected $fillable = [
+        'period_id',
         'venue_id',
-        'schedule_id',
         'student_id',
+        'presentation_date',
+        'start_time',
+        'end_time',
         'presentation_type',
         'notes',
+    ];
+
+    protected $casts = [
+        'presentation_date' => 'date',
     ];
 
     public function student()
@@ -31,13 +38,18 @@ class ThesisPresentation extends Model
         return $this->belongsTo(PresentationVenue::class);
     }
 
-    public function schedule()
+    public function period()
     {
-        return $this->belongsTo(Schedule::class);
+        return $this->belongsTo(Period::class);
     }
 
     public function examiners()
     {
         return $this->hasMany(PresentationExaminer::class);
+    }
+
+    public function leadExaminer()
+    {
+        return $this->hasOne(PresentationExaminer::class)->where('is_lead_examiner', true);
     }
 }

@@ -45,17 +45,22 @@ class StudentService
 
     public function getStudentsByLecturerRole(string $lecturerId, int $role, ?string $periodId = null): array
     {
-        return Student::whereHas('supervisors', function($query) use ($lecturerId, $role) {
-            $query->where('lecturer_id', $lecturerId)
-                  ->where('role', $role)
-                  ->where('status', 'active');
-        })->when($periodId, function($query) use ($periodId) {
-            $query->whereHas('periods', function($q) use ($periodId) {
-                $q->where('periods.id', $periodId);
-            });
-        })->with(['latestProposal' => function($query) {
-            $query->latest();
-        }])->get()->toArray();
+        return Student::select('students.*')
+            ->whereHas('supervisors', function($query) use ($lecturerId, $role) {
+                $query->where('lecturer_id', $lecturerId)
+                      ->where('role', $role)
+                      ->where('status', 'active');
+            })->when($periodId, function($query) use ($periodId) {
+                $query->whereHas('periods', function($q) use ($periodId) {
+                    $q->where('periods.id', $periodId);
+                });
+            })->with(['latestProposal' => function($query) {
+                $query->latest();
+            }])->get()->map(function($student) {
+                $data = $student->toArray();
+                $data['student_number'] = explode('@', $student->email)[0];
+                return $data;
+            })->toArray();
     }
 
     public function getSupervisor1Students(string $lecturerId, ?string $periodId = null): array

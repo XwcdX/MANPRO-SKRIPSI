@@ -147,4 +147,9 @@ class Student extends Authenticatable implements MustVerifyEmail
     {
         return $this->hasOne(HistoryThesis::class)->latestOfMany();
     }
+
+    public function topicApplications()
+    {
+        return $this->hasMany(TopicApplication::class);
+    }
 }

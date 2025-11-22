@@ -17,6 +17,7 @@ Route::middleware(['auth:student', 'verified'])->name('student.')->group(functio
     });
 
     Volt::route('apply-period', 'student.apply-period')->name('apply-period');
+    Volt::route('topics/browse', 'student.topics.browse')->name('topics.browse');
 
     Volt::route('thesis/submit-title', 'student.thesis.submit-title')->name('thesis.submit-title');
     Volt::route('thesis/status', 'student.thesis.status')->name('thesis.status');
@@ -37,6 +38,7 @@ Route::prefix('lecturer')->name('lecturer.')->middleware(['auth:lecturer', 'veri
     
     Route::middleware('permission:offer-topics,lecturer')->group(function () {
         Volt::route('topics', 'lecturer.topics.index')->name('topics.index');
+        Volt::route('topic-applications', 'lecturer.topic-applications.index')->name('topic-applications.index');
     });
 
     Volt::route('schedules/availability', 'lecturer.schedules.availability')->name('schedules.availability');
@@ -55,6 +57,7 @@ Route::prefix('lecturer')->name('lecturer.')->middleware(['auth:lecturer', 'veri
         Volt::route('periods', 'lecturer.periods.index')->name('periods.index');
         Volt::route('periods/{period}/quotas', 'lecturer.periods.manage-quotas')->name('periods.manage-quotas');
         Volt::route('venues', 'lecturer.venues.index')->name('venues.index');
+        Volt::route('presentations', 'lecturer.presentations.index')->name('presentations.index');
     });
 
     Volt::route('profile', 'lecturer.profile')->name('profile');

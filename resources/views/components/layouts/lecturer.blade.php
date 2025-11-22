@@ -25,7 +25,10 @@
             @can('offer-topics')
                 <flux:navlist.group :heading="__('Topics')" class="grid">
                     <flux:navlist.item icon="light-bulb" :href="route('lecturer.topics.index')"
-                        :current="request()->routeIs('lecturer.topics.*')" wire:navigate>{{ __('My Topics') }}
+                        :current="request()->routeIs('lecturer.topics.index')" wire:navigate>{{ __('My Topics') }}
+                    </flux:navlist.item>
+                    <flux:navlist.item icon="inbox-stack" :href="route('lecturer.topic-applications.index')"
+                        :current="request()->routeIs('lecturer.topic-applications.*')" wire:navigate>{{ __('Topic Applications') }}
                     </flux:navlist.item>
                 </flux:navlist.group>
             @endcan
@@ -64,6 +67,9 @@
                     </flux:navlist.item>
                     <flux:navlist.item icon="map-pin" :href="route('lecturer.venues.index')"
                         :current="request()->routeIs('lecturer.venues.*')" wire:navigate>{{ __('Venues') }}
+                    </flux:navlist.item>
+                    <flux:navlist.item icon="presentation-chart-bar" :href="route('lecturer.presentations.index')"
+                        :current="request()->routeIs('lecturer.presentations.*')" wire:navigate>{{ __('Presentations') }}
                     </flux:navlist.item>
                 </flux:navlist.group>
 

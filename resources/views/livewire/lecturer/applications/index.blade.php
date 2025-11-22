@@ -12,6 +12,9 @@ uses(WithPagination::class);
 state([
     'search' => '',
     'statusFilter' => 'pending',
+    'showAcceptModal' => false,
+    'showDeclineModal' => false,
+    'selectedApplicationId' => null,
 ]);
 
 with(fn() => [
@@ -22,16 +25,34 @@ with(fn() => [
     'activePeriod' => app(PeriodService::class)->getActivePeriod(),
 ]);
 
-$accept = function ($applicationId, SupervisionApplicationService $service) {
-    $service->acceptApplication($applicationId, auth()->id());
-    session()->flash('success', 'Application accepted successfully.');
-    $this->resetPage();
+$confirmAccept = function ($applicationId) {
+    $this->selectedApplicationId = $applicationId;
+    $this->showAcceptModal = true;
 };
 
-$decline = function ($applicationId, SupervisionApplicationService $service) {
-    $service->declineApplication($applicationId);
-    session()->flash('success', 'Application declined.');
-    $this->resetPage();
+$accept = function (SupervisionApplicationService $service) {
+    if ($this->selectedApplicationId) {
+        $service->acceptApplication($this->selectedApplicationId, auth()->id());
+        session()->flash('success', 'Application accepted successfully.');
+        $this->showAcceptModal = false;
+        $this->selectedApplicationId = null;
+        $this->resetPage();
+    }
+};
+
+$confirmDecline = function ($applicationId) {
+    $this->selectedApplicationId = $applicationId;
+    $this->showDeclineModal = true;
+};
+
+$decline = function (SupervisionApplicationService $service) {
+    if ($this->selectedApplicationId) {
+        $service->declineApplication($this->selectedApplicationId);
+        session()->flash('success', 'Application declined.');
+        $this->showDeclineModal = false;
+        $this->selectedApplicationId = null;
+        $this->resetPage();
+    }
 };
 
 $updatingSearch = fn() => $this->resetPage();
@@ -118,16 +139,14 @@ $getActivePeriod = fn(PeriodService $service) => $service->getActivePeriod();
                                     <td class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
                                         <div class="flex justify-end items-center gap-2">
                                             <flux:button 
-                                                wire:click="accept('{{ $application->id }}')"
-                                                wire:confirm="Are you sure you want to accept this student? This action cannot be undone and will update the student's status."
+                                                wire:click="confirmAccept('{{ $application->id }}')"
                                                 variant="primary" 
                                                 size="sm" 
                                                 class="cursor-pointer">
                                                 Accept
                                             </flux:button>
                                             <flux:button 
-                                                wire:click="decline('{{ $application->id }}')"
-                                                wire:confirm="Are you sure you want to decline this application?"
+                                                wire:click="confirmDecline('{{ $application->id }}')"
                                                 variant="danger" 
                                                 size="sm" 
                                                 class="cursor-pointer">
@@ -150,6 +169,54 @@ $getActivePeriod = fn(PeriodService $service) => $service->getActivePeriod();
 
             <div class="mt-6">
                 {{ $applications->links() }}
+            </div>
+        </div>
+    </section>
+
+    @if($showAcceptModal)
+        <flux:modal name="accept-modal" wire:model="showAcceptModal" class="max-w-md">
+            <div class="space-y-6">
+                <flux:heading size="lg">Confirm Acceptance</flux:heading>
+                
+                <p class="text-zinc-600 dark:text-zinc-400">
+                    Are you sure you want to accept this student? This action cannot be undone and will update the student's status.
+                </p>
+
+                <div class="flex gap-2">
+                    <flux:spacer />
+                    <flux:button type="button" variant="ghost" wire:click="$set('showAcceptModal', false)" class="cursor-pointer">
+                        Cancel
+                    </flux:button>
+                    <flux:button wire:click="accept" variant="primary" class="cursor-pointer">
+                        Confirm Accept
+                    </flux:button>
+                </div>
+            </div>
+        </flux:modal>
+    @endif
+
+    @if($showDeclineModal)
+        <flux:modal name="decline-modal" wire:model="showDeclineModal" class="max-w-md">
+            <div class="space-y-6">
+                <flux:heading size="lg">Confirm Decline</flux:heading>
+                
+                <p class="text-zinc-600 dark:text-zinc-400">
+                    Are you sure you want to decline this application?
+                </p>
+
+                <div class="flex gap-2">
+                    <flux:spacer />
+                    <flux:button type="button" variant="ghost" wire:click="$set('showDeclineModal', false)" class="cursor-pointer">
+                        Cancel
+                    </flux:button>
+                    <flux:button wire:click="decline" variant="danger" class="cursor-pointer">
+                        Confirm Decline
+                    </flux:button>
+                </div>
+            </div>
+        </flux:modal>
+    @endif
+</div>nks() }}
             </div>
         </div>
     </section>

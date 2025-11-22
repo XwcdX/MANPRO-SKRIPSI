@@ -10,7 +10,7 @@ return new class extends Migration {
      */
     public function up(): void
     {
-        Schema::create('student_status_history', function (Blueprint $table) {
+        Schema::create('student_status_histories', function (Blueprint $table) {
             $table->uuid('id')->primary();
             $table->foreignUuid('student_id')->constrained('students')->onDelete('cascade');
             $table->foreignUuid('period_id')->nullable()->constrained('periods')->onDelete('set null');
