@@ -8,7 +8,7 @@ use App\Models\TopicApplication;
 use App\Models\Period;
 use Illuminate\Support\Facades\DB;
 
-new #[Layout('components.layouts.app.sidebar')] class extends Component {
+new class extends Component {
     use WithPagination;
 
     public string $search = '';
@@ -30,9 +30,7 @@ new #[Layout('components.layouts.app.sidebar')] class extends Component {
     public function with(): array
     {
         $student = auth()->user();
-        $activePeriod = Period::whereNotIn('status', ['thesis_in_progress', 'thesis', 'completed', 'archived'])
-            ->orderBy('start_date', 'desc')
-            ->first();
+        $activePeriod = $student->activePeriod();
         
         $hasSupervisor = DB::table('student_lecturers')
             ->where('student_id', $student->id)
@@ -90,9 +88,8 @@ new #[Layout('components.layouts.app.sidebar')] class extends Component {
 
     public function openApplyModal(LecturerTopic $topic): void
     {
-        $activePeriod = Period::whereNotIn('status', ['thesis_in_progress', 'thesis', 'completed', 'archived'])
-            ->orderBy('start_date', 'desc')
-            ->first();
+        $student = auth()->user();
+        $activePeriod = $student->activePeriod();
         
         if (!$activePeriod) {
             session()->flash('error', 'No active period available.');
@@ -124,9 +121,8 @@ new #[Layout('components.layouts.app.sidebar')] class extends Component {
             return;
         }
 
-        $activePeriod = Period::whereNotIn('status', ['thesis_in_progress', 'thesis', 'completed', 'archived'])
-            ->orderBy('start_date', 'desc')
-            ->first();
+        $student = auth()->user();
+        $activePeriod = $student->activePeriod();
         
         if (!$activePeriod) {
             session()->flash('error', 'No active period available.');
@@ -162,7 +158,7 @@ new #[Layout('components.layouts.app.sidebar')] class extends Component {
 ?>
 
 <div>
-    <div class="bg-white rounded-lg shadow-lg p-6">
+    <div class="bg-white rounded-lg shadow-lg p-6 text-black">
         <div class="mb-6">
             <h1 class="text-3xl font-bold text-gray-800">Browse Lecturer Topics</h1>
             <p class="text-gray-600 mt-1">Find and apply for thesis topics offered by lecturers.</p>

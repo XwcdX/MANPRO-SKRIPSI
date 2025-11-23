@@ -33,31 +33,31 @@ class PermissionSeeder extends Seeder
 
         $this->command->info('Core roles created or verified successfully.');
 
-        $supervisorRole->syncPermissions([
-            'view-students',
-            'set-availability',
-        ]);
+        // $supervisorRole->syncPermissions([
+        //     'view-students',
+        //     'set-availability',
+        // ]);
 
         $seniorSupervisorRole->syncPermissions([
-            'view-students',
-            'edit-student-status',
-            'set-availability',
+            // 'view-students',
+            // 'edit-student-status',
+            // 'set-availability',
             'offer-topics',
         ]);
 
         $headDivisionRole->syncPermissions([
-            'view-students',
-            'edit-student-status',
-            'approve-thesis-title',
-            'set-availability',
+            // 'view-students',
+            // 'edit-student-status',
+            // 'approve-thesis-title',
+            // 'set-availability',
             'offer-topics',
         ]);
 
         $headThesisRole->syncPermissions([
-            'view-students',
-            'edit-student-status',
-            'approve-thesis-title',
-            'set-availability',
+            // 'view-students',
+            // 'edit-student-status',
+            // 'approve-thesis-title',
+            // 'set-availability',
             'offer-topics',
             'administrate',
         ]);
