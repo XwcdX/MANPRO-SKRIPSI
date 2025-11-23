@@ -60,7 +60,7 @@ new class extends Component {
         $this->status = $user->status ?? 0;
         $raw = Lecturer::with('divisions')->get();
 
-        $this->lecturers1 = $raw->where('title', '!=', 0)->mapWithKeys(fn ($lecturer) => [
+        $this->lecturers1 = $raw->filter(fn ($lecturer) => $lecturer->hasPermissionTo('offer-topics'))->mapWithKeys(fn ($lecturer) => [
             $lecturer->id => $lecturer->name . ($lecturer->divisions->isNotEmpty() ? ' (' . $lecturer->divisions->pluck('name')->implode(', ') . ')' : '')
         ])->toArray();
         $this->lecturers2 = $raw->mapWithKeys(fn ($lecturer) => [
