@@ -8,18 +8,22 @@ use App\Services\CrudService;
 use Livewire\WithFileUploads;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Storage;
+use Livewire\WithPagination;
 
 new class extends Component {
-    use WithAuthUser, WithFileUploads;
+    use WithAuthUser, WithFileUploads, WithPagination;
+
+    protected string $paginationTheme = 'tailwind';
 
     public string $description = '';
     public $proposal_file;
-    public array $history = [];
 
-    public function mount()
+    public function getHistoryProperty()
     {
-        $this->user->load(['history_proposals']);
-        $this->history = $this->user->history_proposals->map(function ($h) {
+        return $this->user->history_proposals()
+        ->latest()
+        ->paginate(5)
+        ->through(function ($h) {
             $statusText = match ($h->status) {
                 0 => 'Pending',
                 1 => 'Revision',
@@ -28,15 +32,9 @@ new class extends Component {
                 default => 'Unknown',
             };
 
-            return [
-                'id' => $h->id,
-                'description' => $h->description,
-                'file_path' => $h->file_path,
-                'comment' => $h->comment,
-                'status' => $statusText,
-                'created_at' => $h->created_at->format('Y-m-d H:i:s'),
-            ];
-        })->toArray();
+            $h->status_text = $statusText;
+            return $h;
+        });
     }
 
     public function submit(SubmissionService $service)
@@ -173,22 +171,24 @@ new class extends Component {
                     </tr>
                 </thead>
                 <tbody>
-                    @foreach ($history as $item)
+                    @foreach ($this->history as $h)
                         <tr class="bg-white border-b hover:bg-gray-50">
-                            <td class="px-6 py-4 whitespace-nowrap">{{ $item['created_at'] }}</td>
-                            <td class="px-6 py-4">{{ $item['description'] }}</td>
+                            <td class="px-6 py-4 whitespace-nowrap">{{ $h->created_at->format('Y-m-d H:i:s') }}</td>
+                            <td class="px-6 py-4">{{ $h->description }}</td>
                             <td class="px-6 py-4 whitespace-nowrap text-blue-600 hover:text-blue-800 cursor-pointer">
-                                <a href="{{ Storage::url($item['file_path']) }}" 
-                                target="_blank" 
-                                class="text-blue-600 hover:text-blue-800">
-                                Lihat File
-                            </a></td>
-                            <td class="px-6 py-4 whitespace-nowrap">{{ $item['comment'] }}</td>
-                            <td class="px-6 py-4 whitespace-nowrap font-semibold">{{ $item['status'] }}</td>
+                                <a href="{{ Storage::url($h->file_path) }}" target="_blank" class="text-blue-600 hover:text-blue-800">
+                                    Lihat File
+                                </a>
+                            </td>
+                            <td class="px-6 py-4 whitespace-nowrap">{{ $h->comment }}</td>
+                            <td class="px-6 py-4 whitespace-nowrap font-semibold">{{ $h->status_text }}</td>
                         </tr>
                     @endforeach
                 </tbody>
             </table>
+            <div class="mt-4">
+                {{ $this->history->links() }}
+            </div>
         </div>
     </div>
 </div>
