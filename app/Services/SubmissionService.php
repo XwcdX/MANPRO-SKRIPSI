@@ -30,7 +30,7 @@ class SubmissionService
     public function submitProposal(Student $student, UploadedFile $file, string $description)
     {
         $path = $this->fileService->upload($file, 'proposal', $student, "public");
-        $this->crud->setModel(new HistoryProposal())->create([
+        HistoryProposal::create([
             'student_id' => $student->id,
             'description' => $description,
             'file_path' => $path
@@ -48,7 +48,7 @@ class SubmissionService
     public function submitThesis(Student $student, UploadedFile $file, string $description)
     {
         $path = $this->fileService->upload($file, 'thesis', $student, "public");
-        $this->crud->setModel(new HistoryThesis())->create([
+        HistoryThesis::create([
             'student_id' => $student->id,
             'description' => $description,
             'file_path' => $path
@@ -70,9 +70,7 @@ class SubmissionService
             $path = $this->fileService->upload($file, 'final_proposal', $student, "public");
 
             // ambil ulang data student
-            $student = $this->crud
-                ->setModel(new Student())
-                ->find($student->id);
+            $student = Student::findOrFail($student->id);
 
             // update path
             $student->final_proposal_path = $path;
@@ -111,9 +109,7 @@ class SubmissionService
             $path = $this->fileService->upload($file, 'final_thesis', $student, "public");
 
             // ambil ulang data student
-            $student = $this->crud
-                ->setModel(new Student())
-                ->find($student->id);
+            $student = Student::findOrFail($student->id);
 
             // update path
             $student->final_thesis_path = $path;
@@ -165,14 +161,10 @@ class SubmissionService
                 throw new \Exception('Judul memiliki kemiripan diatas 70% dengan judul terdahulu!');
             }
 
-            $student = $this->crud
-                ->setModel(new Student())
-                ->find($studentId);
+            $student = Student::findOrFail($studentId);
 
             // Update data mahasiswa
-            $this->crud
-                ->setModel(new Student())
-                ->update($studentId, [
+            Student::update($studentId, [
                     'status' => $student->status == 0 ? 1 : $student->status,
                     'thesis_title' => $title,
                     'thesis_description' => $description,
@@ -225,8 +217,8 @@ class SubmissionService
     public function assignSupervisor(string $studentId, string $supervisorId, int $role, string $note = null): array
     {
         try {
-            $student = $this->crud->setModel(new Student())->find($studentId);
-            $lecturer = $this->crud->setModel(new Lecturer())->find($supervisorId);
+            $student = Student::find($studentId);
+            $lecturer = Lecturer::find($supervisorId);
 
             if (!$student || !$lecturer) {
                 throw new \Exception('Data mahasiswa atau dosen tidak ditemukan.');
@@ -267,7 +259,7 @@ class SubmissionService
                 $exists->save();
             }
             else{
-                $this->crud->setModel(new SupervisionApplication())->create([
+                SupervisionApplication::create([
                     'period_id' => $period->id,
                     'lecturer_id' => $lecturer->id,
                     'student_id' => $student->id,
@@ -297,8 +289,8 @@ class SubmissionService
     public function cancelSupervisor(string $studentId, string $supervisorId, int $role): array
     {
         try {
-            $student = $this->crud->setModel(new Student())->find($studentId);
-            $lecturer = $this->crud->setModel(new Lecturer())->find($supervisorId);
+            $student = Student::find($studentId);
+            $lecturer = Lecturer::find($supervisorId);
 
             if (!$student || !$lecturer) {
                 throw new \Exception('Data mahasiswa atau dosen tidak ditemukan.');
