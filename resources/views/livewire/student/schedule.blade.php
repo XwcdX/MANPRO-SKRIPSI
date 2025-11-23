@@ -2,63 +2,68 @@
 
 use App\Traits\WithAuthUser;
 use Livewire\Volt\Component;
-use Livewire\Attributes\Layout;
-use App\Services\SubmissionService;
 
 new class extends Component {
     use WithAuthUser;
 
-    public $presentation;
+    public string $type = 'proposal'; // proposal | final
+
+    public $presentation = null;
     public string $tanggal = '';
     public string $jam = '';
     public string $lokasi = '';
-    public string $status = ''; //Ini masih ga jelas si perlu ga
+    public string $status = '';
 
-    public function mount()
+    public function mount($type = 'proposal')
     {
+        $this->type = $type;
+
+        $relation = $type === 'final'
+            ? 'finalPresentations'
+            : 'proposalPresentations';
+
         $this->user->load([
-            'proposalPresentations' => function ($q) {
+            $relation => function ($q) {
                 $periodId = $this->user->activePeriod()?->id;
 
-                $q->when($periodId, fn ($query) => $query->where('period_id', $periodId))
-                ->with(['venue', 'schedule']);
+                $q->when($periodId, fn ($query) =>
+                    $query->where('period_id', $periodId)
+                )->with(['venue', 'schedule']);
             }
         ]);
 
-        $presentation = $this->user->proposalPresentations->first();
+        $this->presentation = $this->user->$relation->first();
 
-        if ($presentation) {
-            // tanggal
-            $this->tanggal = \Carbon\Carbon::parse($presentation->presentation_date)
-                ->translatedFormat('d F Y');
-
-            // jam: start - end
-            $this->jam = \Carbon\Carbon::parse($presentation->start_time)->format('H:i')
-                . ' - ' .
-                \Carbon\Carbon::parse($presentation->end_time)->format('H:i');
-
-            // lokasi
-            $this->lokasi = $presentation->venue?->name
-                ? $presentation->venue->name . ' – ' . $presentation->venue->location
-                : '-';
-
-            //Status disini kalau perlu
-        } else {
-            $this->tanggal = '';
-            $this->jam = '';
-            $this->lokasi = '';
-            $this->status = '';
+        if ($this->presentation) {
+            $this->setupPresentationData();
         }
+    }
+
+    private function setupPresentationData()
+    {
+        $p = $this->presentation;
+
+        $this->tanggal = \Carbon\Carbon::parse($p->presentation_date)
+            ->translatedFormat('d F Y');
+
+        $this->jam = \Carbon\Carbon::parse($p->start_time)->format('H:i')
+            . ' - ' .
+            \Carbon\Carbon::parse($p->end_time)->format('H:i');
+
+        $this->lokasi = $p->venue
+            ? $p->venue->name . ' - ' . $p->venue->location
+            : '-';
+
+        $this->status = ucfirst($p->status ?? 'Terjadwal');
     }
 };
 ?>
-
 
 <div class="pt-4 md:pt-8 mb-16 md:mb-20">
     <div class="flex flex-col items-center justify-center p-0 md:p-4">
 
         <h1 class="text-2xl md:text-4xl font-semibold text-gray-800 mb-8 md:mb-10 text-center">
-            Jadwal Sidang Proposal
+            Jadwal Sidang {{ $type === 'final' ? 'Skripsi' : 'Proposal' }}
         </h1>
 
         @if($presentation)
@@ -93,4 +98,3 @@ new class extends Component {
 
     </div>
 </div>
-
