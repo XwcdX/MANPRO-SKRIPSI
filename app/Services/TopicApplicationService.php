@@ -39,6 +39,20 @@ class TopicApplicationService
                 'lecturer_notes' => $notes,
             ]);
 
+            $student->load([
+                'supervisionApplications' => fn ($q) => $q->where('period_id', $student->activePeriod()->id)->whereIn('status', ['pending', 'accepted'])
+            ]);
+
+            foreach ($student->supervisionApplications as $application) {
+                if ($application->status === 'pending') {
+                    $application->status = 'canceled';
+                } elseif ($application->status === 'accepted') {
+                    $application->status = 'changed';
+                }
+
+                $application->save();
+            }
+
             DB::table('student_lecturers')->insert([
                 'id' => Str::uuid(),
                 'student_id' => $application->student_id,

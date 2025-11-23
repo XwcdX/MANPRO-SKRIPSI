@@ -17,6 +17,14 @@ class SupervisionApplicationService
             $student = $application->student;
             
             $application->update(['status' => 'accepted']);
+
+            $student->load([
+                'topicApplications' => fn ($q) => $q->where('period_id', $student->activePeriod()->id)->whereIn('status', ['pending'])
+            ]);
+
+            foreach ($student->topicApplications as $application) {
+                $application->delete();
+            }
             
             DB::table('student_lecturers')->insert([
                 'id' => Str::uuid(),
