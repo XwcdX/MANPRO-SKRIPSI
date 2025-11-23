@@ -26,42 +26,50 @@ class SubmissionService
      * 
      * @param string $studentId Student's Id or User Id
      * @param UploadedFile $file
+     * @param string $type thesis or proposal
      */
-    public function submitProposal(Student $student, UploadedFile $file, string $description)
+    public function submitRevisionFile(Student $student, UploadedFile $file, string $description, string $type)
     {
-        $path = $this->fileService->upload($file, 'proposal', $student, "public");
-        HistoryProposal::create([
+        $config = [
+            'proposal' => [
+                'folder' => 'proposal',
+                'model'  => HistoryProposal::class,
+            ],
+            'thesis' => [
+                'folder' => 'thesis',
+                'model'  => HistoryThesis::class,
+            ],
+        ];
+
+        if (! isset($config[$type])) {
+            throw new \InvalidArgumentException("Tipe submission tidak valid: {$type}");
+        }
+
+        $path = $this->fileService->upload(
+            $file,
+            $config[$type]['folder'],
+            $student,
+            'public'
+        );
+
+        $model = $config[$type]['model'];
+
+        $model::create([
             'student_id' => $student->id,
             'description' => $description,
-            'file_path' => $path
+            'file_path' => $path,
         ]);
-        // tambahan logika lain harusnya seperti next step sama notify dosen
+
         return true;
     }
 
-    /**
-     * Submit Thesis
-     * 
-     * @param string $studentId Student's Id or User Id
-     * @param UploadedFile $file
-     */
-    public function submitThesis(Student $student, UploadedFile $file, string $description)
-    {
-        $path = $this->fileService->upload($file, 'thesis', $student, "public");
-        HistoryThesis::create([
-            'student_id' => $student->id,
-            'description' => $description,
-            'file_path' => $path
-        ]);
-        // tambahan logika lain harusnya seperti next step sama notify dosen
-        return true;
-    }
 
     /**
      * Submit final
      * 
      * @param string $studentId Student's Id or User Id
      * @param UploadedFile $file
+     * @param string $type thesis or proposal
      */
     public function submitFinalFile(Student $student, UploadedFile $file, string $type = 'proposal')
     {
