@@ -32,29 +32,34 @@ new class extends Component {
     {
         $this->crud = new CrudService();
         $this->user->load([
-            'supervisionApplications' => fn ($q) => $q->where('period_id', $this->user->activePeriod()->id)->whereNot('status', 'declined')->whereNot('status', 'canceled')
+            'supervisionApplications' => fn ($q) => $q->where('period_id', $this->user->activePeriod()->id)->whereNot('status', 'declined')->whereNot('status', 'canceled'),
+            'supervisors'
         ]);
-        $supervisor = $this->user->supervisionApplications->map(function ($s) {
-            return [
-                'id' => $s->id,
-                'student_notes' => $s->student_notes,
-                'lecturer_id' => $s->lecturer_id,
-                'proposed_role' => $s->proposed_role,
-                'status' => $s->status,
-            ];
-        })->toArray();
-        if($supervisor){
-            foreach ($supervisor as $s) {
-                if($s['proposed_role'] == 0){
-                    $this->dosbing1 = $s['lecturer_id'];
-                    $this->reason1 = $s['student_notes'];
-                    $this->status1 = $s['status'];
-                }
-                else if($s['proposed_role'] == 1){
-                    $this->dosbing2 = $s['lecturer_id'];
-                    $this->reason2 = $s['student_notes'];
-                    $this->status2 = $s['status'];
-                }
+        // 1. Ambil dosbing resmi dulu dari pivot
+        foreach ($this->user->supervisors as $lecturer) {
+            if ($lecturer->pivot->role == 0) {
+                $this->dosbing1 = $lecturer->id;
+                $this->status1 = 'active';
+            }
+
+            if ($lecturer->pivot->role == 1) {
+                $this->dosbing2 = $lecturer->id;
+                $this->status2 = 'active';
+            }
+        }
+
+        // 2. Ambil yang belum ada dari supervisionApplications
+        foreach ($this->user->supervisionApplications as $app) {
+            if ($app->proposed_role == 0 && !$this->dosbing1) {
+                $this->dosbing1 = $app->lecturer_id;
+                $this->reason1 = $app->student_notes;
+                $this->status1 = $app->status;
+            }
+
+            if ($app->proposed_role == 1 && !$this->dosbing2) {
+                $this->dosbing2 = $app->lecturer_id;
+                $this->reason2 = $app->student_notes;
+                $this->status2 = $app->status;
             }
         }
         $this->status = $user->status ?? 0;
