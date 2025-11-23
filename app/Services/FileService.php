@@ -23,7 +23,7 @@ class FileService
         $extension = $file->getClientOriginalExtension();
 
         // Buat nama file custom: studentID_timestamp.ext
-        $filename = $student->name . '_proposal_' . time() . '.' . $extension;
+        $filename = $student->name . '_' . time() . '.' . $extension;
 
         // Simpan file
         $filePath = $file->storeAs($path, $filename, $disk);

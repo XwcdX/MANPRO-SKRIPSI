@@ -118,13 +118,13 @@ new class extends Component {
             @elseif($currentStatus == 3)
                 @livewire('student.schedule', ['type' => 'proposal'])
             @elseif($currentStatus == 4)
-                @livewire('student.final-proposal')
+                @livewire('student.upload-final', ['type' => 'proposal'])
             @elseif($currentStatus == 5)
                 @livewire('student.upload-thesis')
             @elseif($currentStatus == 6)
                 @livewire('student.schedule', ['type' => 'final'])
             @elseif($currentStatus == 7)
-                @livewire('student.final-thesis')
+                @livewire('student.upload-final', ['type' => 'thesis'])
             @endif
         </div> {{-- End Desktop Container --}}
 
@@ -174,13 +174,13 @@ new class extends Component {
                                     @elseif($index == 3)
                                         @livewire('student.schedule', ['type' => 'proposal'])
                                     @elseif($index == 4)
-                                        @livewire('student.final-proposal')
+                                        @livewire('student.upload-final', ['type' => 'proposal'])
                                     @elseif($index == 5)
                                         @livewire('student.upload-thesis')
                                     @elseif($index == 6)
                                         @livewire('student.schedule', ['type' => 'final'])
                                     @elseif($index == 7)
-                                        @livewire('student.final-thesis')
+                                        @livewire('student.upload-final', ['type' => 'thesis'])
                                     @endif
                                 @else
                                     <p>Anda belum sampai tahap ini!</p>
