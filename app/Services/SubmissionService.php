@@ -4,14 +4,18 @@ namespace App\Services;
 
 use App\Models\Period;
 use App\Models\Student;
-use App\Models\HistoryProposal;
-use App\Models\HistoryThesis;
 use App\Models\Lecturer;
+use App\Models\ThesisTitle;
+use App\Models\HistoryThesis;
+use App\Models\HistoryProposal;
 use Illuminate\Http\UploadedFile;
+use Illuminate\Support\Facades\Http;
 use App\Models\SupervisionApplication;
+use App\Traits\HasPythonVectorization;
 
 class SubmissionService
 {
+    use HasPythonVectorization;
     protected FileService $fileService;
     protected CrudService $crud;
 
@@ -132,22 +136,23 @@ class SubmissionService
             }
 
             // Validasi khusus judul (misalnya sudah dipakai atau tidak)
-            if (! $this->isTitleValid($title)) {
+            $res = $this->isTitleValid($title);
+            if (!$res['success']) {
                 \Log::info("Judul tidak valid atau sudah digunakan", [
                     'student_id' => $studentId,
                     'title' => $title,
                 ]);
-                throw new \Exception('Judul memiliki kemiripan diatas 70% dengan judul terdahulu!');
+                throw new \Exception($res['message']);
             }
 
             $student = Student::findOrFail($studentId);
 
             // Update data mahasiswa
-            Student::update($studentId, [
-                    'status' => $student->status == 0 ? 1 : $student->status,
-                    'thesis_title' => $title,
-                    'thesis_description' => $description,
-                ]);
+            $student->update([
+                'status' => $student->status == 0 ? 1 : $student->status,
+                'thesis_title' => $title,
+                'thesis_description' => $description,
+            ]);
 
             \Log::info("✅ Judul berhasil disubmit", [
                 'student_id' => $studentId,
@@ -180,8 +185,65 @@ class SubmissionService
      */
     private function isTitleValid(string $title)
     {
-        return True;
-        //Logika check disini, returnya boolean
+        // 1. Dapatkan Vector dari Judul Baru
+        $newVector = $this->getVectorFromPython($title);
+
+        if (!$newVector) {
+            return [
+                'success' => false,
+                'message' => "Gagal memproses AI Vectorization"
+            ];
+        }
+
+        // 2. Ambil semua vector yang ada di DB
+        // Select ID untuk referensi, dan embedding untuk perhitungan
+        // Kita filter yang embedding-nya tidak null
+        $existingData = ThesisTitle::whereNotNull('embedding')
+                        ->select('id', 'embedding')
+                        ->get();
+        
+        if ($existingData->isEmpty()) {
+            return ['success' => true];
+        }
+
+        // 3. Siapkan data untuk dikirim ke Python (Batch)
+        $candidateVectors = $existingData->pluck('embedding')->toArray();
+        $candidateIds = $existingData->pluck('id')->toArray();
+
+        $baseUrl = env('PYTHON_API_URL', 'http://127.0.0.1:5001');
+
+        // 4. Kirim ke endpoint similarity-search
+        $response = Http::post("{$baseUrl}/similarity-search", [
+            'source_vector' => $newVector,
+            'candidate_vectors' => $candidateVectors,
+            'candidate_ids' => $candidateIds
+        ]);
+
+        if ($response->failed()) {
+            return [
+                'success' => false,
+                'message' => "Gagal melakukan pencarian kesamaan"
+            ];
+        }
+
+        $result = $response->json();
+
+        // 5. Cek Hasil
+        if ($result['is_similar']) {
+            // Ambil data detail judul yang mirip berdasarkan ID yang dikembalikan Python
+            $matchedThesis = ThesisTitle::find($result['matched_id']);
+            
+            $percentage = round($result['score'] * 100, 1);
+
+            return [
+                'success' => false,
+                'message' => "Judul anda memiliki kesamaan {$percentage}% dengan judul \"{$matchedThesis->title}\", milik {$matchedThesis->student_name} ({$matchedThesis->completion_year})"
+            ];
+        }
+
+        return [
+            'success' => true,
+        ];
     }
 
     /**

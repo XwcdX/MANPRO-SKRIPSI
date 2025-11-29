@@ -22,6 +22,7 @@ new class extends Component {
     public function updateStudentStatus($status)
     {
         $this->studentStatus = $status;
+        $this->currentStatus = $status;
         \Log::info('🔔 Event diterima di komponen dashboard', [
             'ssstatus' => $this->studentStatus,
         ]);
@@ -39,7 +40,8 @@ new class extends Component {
                 title: '{$message}',
                 position: 'top-end',
                 timer: 3000,
-                showConfirmButton: false
+                showConfirmButton: false,
+                width: '500px'
             });
         ");
     }

@@ -27,13 +27,26 @@ new class extends Component {
             return;
         }
 
-        // panggil service
-        $response = $service->submitTitle($this->user->id, $this->title, $this->description);
+        try {
+            $response = $service->submitTitle($this->user->id, $this->title, $this->description);
 
-        if ($response['success']) {
-            $this->dispatch('notify', type: 'success', message: $response['message']);
-        } else {
-            $this->dispatch('notify', type: 'error', message: $response['message']);
+            if ($response['success']) {
+                if($this->status == 0){
+                    $this->status = 1;
+                    $this->dispatch('student-status-updated', status: 1);
+                }
+                $this->dispatch('notify', type: 'success', message: $response['message']);
+            } else {
+                $this->dispatch('notify', type: 'error', message: $response['message']);
+            }
+
+        } catch (\Throwable $e) {
+            \Log::error($e);
+
+            // Buat Livewire tetap punya balasan yang valid
+            $this->dispatch('notify', type: 'error', message: 'Gagal memproses.');
+
+            return;
         }
     }
 };
@@ -59,12 +72,6 @@ new class extends Component {
                        text-sm rounded-lg p-2.5 focus:ring-2 focus:ring-blue-500 focus:outline-none"
                 placeholder="Masukkan judul proposal..."
             >
-
-            <button 
-                type="button"
-                class="px-5 py-2.5 bg-gray-700 text-white font-medium rounded-lg hover:bg-gray-800 transition sm:w-auto w-full">
-                Search
-            </button>
         </div>
     </div>
 

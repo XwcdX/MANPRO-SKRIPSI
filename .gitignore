@@ -22,3 +22,4 @@ yarn-error.log
 /.vscode
 /.zed
 /.amazonq
+/resources/python/venv
