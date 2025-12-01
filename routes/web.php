@@ -4,6 +4,14 @@ use App\Http\Controllers\Auth\AuthController;
 use Illuminate\Support\Facades\Route;
 use Livewire\Volt\Volt;
 
+use App\Http\Controllers\Auth\GoogleController;
+
+Route::get('/auth/google', [GoogleController::class, 'redirect'])
+    ->name('google.redirect');
+
+Route::get('/auth/google/callback', [GoogleController::class, 'callback'])
+    ->name('google.callback');
+
 Route::middleware('guest:student,lecturer')->group(function () {
     Volt::route('/', 'auth.login')->name('home');
     Volt::route('login', 'auth.login')->name('login');

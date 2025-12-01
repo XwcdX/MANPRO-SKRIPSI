@@ -55,17 +55,17 @@ new #[Layout('components.layouts.auth')] class extends Component {
 <div class="flex flex-col lg:flex-row min-h-screen text-black">
 
     <div id="login-container-mobile"
-         class="w-full lg:w-1/3 bg-white flex items-center justify-center min-h-screen p-8 lg:p-12">
+         class="w-full lg:w-1/3 bg-white flex items-center justify-center min-h-screen p-8">
 
         <div class="w-full max-w-sm">
             {{-- Header --}}
-            <img class="pb-6" src="{{ asset('assets/logopcubiru.png') }}" alt="logopcubiru">
-            <h2 class="text-xl font-medium text-gray-700 mb-4">
+            <div class="flex justify-center"><img class="pb-6 w-64" src="{{ asset('assets/logopcubiru.png') }}" alt="logopcubiru"></div>
+            <h2 class="text-lg font-medium text-gray-700 mb-4">
                 Pendaftaran & Penjadwalan Proposal Skripsi
             </h2>
 
             {{-- Form Livewire --}}
-            <form wire:submit="login" class="flex flex-col gap-4">
+            <form wire:submit="login" class="flex flex-col gap-2">
                 <div>
                     <label for="nrp" class="block text-sm font-medium text-gray-700">
                         NRP / Username
@@ -83,8 +83,8 @@ new #[Layout('components.layouts.auth')] class extends Component {
                         </span>
                         <select wire:model="role"
                             class="flex-1 px-4 py-3 bg-gray-100 border border-l-0 border-gray-200 rounded-r-lg focus:outline-none focus:ring-2 focus:ring-gray-700 text-sm">
-                            <option value="student">{{ config('domains.student') }}</option>
-                            <option value="lecturer">{{ config('domains.lecturer') }}</option>
+                            <option value="student">{{ ltrim(config('domains.student'), '@') }}</option>
+                            <option value="lecturer">{{ ltrim(config('domains.lecturer'), '@') }}</option>
                         </select>
                     </div>
 
@@ -113,7 +113,7 @@ new #[Layout('components.layouts.auth')] class extends Component {
                         <span class="text-sm text-red-600">{{ $message }}</span>
                     @enderror
                 </div>
-                <div class="flex flex-col gap-4">
+                <div class="flex flex-col gap-2">
                     {{-- Remember & Lupa Password --}}
                     <div class="flex items-center justify-between">
                         <label class="flex items-center text-sm">
@@ -134,6 +134,19 @@ new #[Layout('components.layouts.auth')] class extends Component {
                         <span wire:loading.remove>LOG IN</span>
                         <span wire:loading>Processing...</span>
                     </button>
+
+                    <a href="{{ route('google.redirect') }}"
+                    class="w-full flex items-center justify-center gap-2 border border-gray-300 py-3 px-4 rounded-lg hover:bg-gray-100 transition-colors duration-300">
+                        <img src="" alt="google" class="w-5 h-5">
+                        Login with Google
+                    </a>
+
+                    <p class="text-xs text-center text-gray-600">
+                        Belum punya akun? Login dengan Google atau
+                        <a href="" class="text-gray-900 font-medium hover:underline">
+                            daftar di sini
+                        </a>.
+                    </p>
 
                     {{-- Info tambahan --}}
                     <p class="text-xs sm:text-sm mt-3 text-gray-600">
