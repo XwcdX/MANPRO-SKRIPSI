@@ -7,11 +7,9 @@ use App\Services\ProposalService;
 use Illuminate\Support\Facades\Storage;
 
 new #[Layout('components.layouts.lecturer')] class extends Component {
-    public $activeTab = 'supervisor1';
     public $selectedPeriod = null;
     public $activePeriods = [];
-    public $supervisor1Students = [];
-    public $supervisor2Students = [];
+    public $divisionStudents = [];
     public $showPdfModal = false;
     public $pdfUrl = '';
     public $showDetailModal = false;
@@ -20,8 +18,6 @@ new #[Layout('components.layouts.lecturer')] class extends Component {
     public $showDeclineModal = false;
     public $selectedProposal = null;
     public $comment = '';
-    public $selectedDivision = null;
-    public $divisions = [];
 
     protected StudentService $studentService;
     protected ProposalService $proposalService;
@@ -30,7 +26,6 @@ new #[Layout('components.layouts.lecturer')] class extends Component {
     {
         $this->studentService = $studentService;
         $this->proposalService = $proposalService;
-        $this->divisions = \App\Models\Division::orderBy('name')->get()->toArray();
     }
 
     public function mount(): void
@@ -49,15 +44,26 @@ new #[Layout('components.layouts.lecturer')] class extends Component {
 
     public function loadStudents(): void
     {
-        $lecturerId = auth()->id();
+        $lecturer = auth()->user();
         
-        $this->supervisor1Students = $this->studentService->getSupervisor1Students($lecturerId, $this->selectedPeriod);
-        $this->supervisor2Students = $this->studentService->getSupervisor2Students($lecturerId, $this->selectedPeriod);
-    }
-
-    public function setActiveTab($tab): void
-    {
-        $this->activeTab = $tab;
+        $this->divisionStudents = \App\Models\Student::where('division_id', $lecturer->primary_division_id)
+            ->when($this->selectedPeriod, function($query) {
+                $query->whereHas('periods', function($q) {
+                    $q->where('periods.id', $this->selectedPeriod);
+                });
+            })
+            ->with(['latestProposal', 'history_proposals' => function($query) {
+                $query->orderBy('created_at', 'desc');
+            }, 'latestThesis', 'history_theses' => function($query) {
+                $query->orderBy('created_at', 'desc');
+            }])
+            ->get()
+            ->map(function($student) {
+                $data = $student->toArray();
+                $data['student_number'] = explode('@', $student->email)[0];
+                return $data;
+            })
+            ->toArray();
     }
 
     public function updatedSelectedPeriod(): void
@@ -71,22 +77,15 @@ new #[Layout('components.layouts.lecturer')] class extends Component {
         $this->showPdfModal = true;
     }
 
-    public function closePdfModal(): void
-    {
-        $this->showPdfModal = false;
-        $this->pdfUrl = '';
-    }
-
     public function viewDetails($studentData): void
     {
         $this->selectedStudent = $studentData;
         $this->showDetailModal = true;
     }
 
-    public function confirmAccept($id, $type = 'proposal', $studentDivisionId = null): void
+    public function confirmAccept($id, $type = 'proposal'): void
     {
         $this->selectedProposal = ['id' => $id, 'type' => $type];
-        $this->selectedDivision = $studentDivisionId;
         $this->comment = '';
         $this->showAcceptModal = true;
     }
@@ -101,12 +100,13 @@ new #[Layout('components.layouts.lecturer')] class extends Component {
     public function acceptProposal(): void
     {
         if ($this->selectedProposal['type'] === 'thesis') {
-            $this->proposalService->acceptThesis($this->selectedProposal['id'], $this->comment);
-            session()->flash('success', 'Thesis accepted successfully.');
+            $thesis = \App\Models\HistoryThesis::findOrFail($this->selectedProposal['id']);
+            $thesis->update(['status' => 3, 'comment' => $this->comment]);
+            session()->flash('success', 'Thesis approved by division head.');
         } else {
-            $this->validate(['selectedDivision' => 'required|uuid|exists:divisions,id']);
-            $this->proposalService->acceptProposal($this->selectedProposal['id'], $this->selectedDivision, $this->comment);
-            session()->flash('success', 'Proposal accepted and assigned to division.');
+            $proposal = \App\Models\HistoryProposal::findOrFail($this->selectedProposal['id']);
+            $proposal->update(['status' => 3, 'comment' => $this->comment]);
+            session()->flash('success', 'Proposal approved by division head.');
         }
         $this->showAcceptModal = false;
         $this->showDetailModal = false;
@@ -118,11 +118,10 @@ new #[Layout('components.layouts.lecturer')] class extends Component {
         $this->validate(['comment' => 'required|string|min:10']);
         if ($this->selectedProposal['type'] === 'thesis') {
             $this->proposalService->declineThesis($this->selectedProposal['id'], $this->comment);
-            session()->flash('success', 'Thesis declined. Student will be notified.');
         } else {
             $this->proposalService->declineProposal($this->selectedProposal['id'], $this->comment);
-            session()->flash('success', 'Proposal declined. Student will be notified.');
         }
+        session()->flash('success', 'Submission declined.');
         $this->showDeclineModal = false;
         $this->showDetailModal = false;
         $this->loadStudents();
@@ -131,9 +130,11 @@ new #[Layout('components.layouts.lecturer')] class extends Component {
 
 <div class="space-y-6">
     <div class="flex justify-between items-center">
-        <h1 class="text-3xl font-bold text-zinc-900 dark:text-zinc-100">My Students</h1>
+        <div>
+            <h1 class="text-3xl font-bold text-zinc-900 dark:text-zinc-100">Division Students</h1>
+            <p class="text-sm text-zinc-600 dark:text-zinc-400 mt-1">Review submissions from students in your division</p>
+        </div>
         
-        <!-- Period Filter -->
         @if(count($activePeriods) > 0)
             <div class="flex items-center space-x-2">
                 <label class="text-sm font-medium text-zinc-700 dark:text-zinc-300">Period:</label>
@@ -147,116 +148,60 @@ new #[Layout('components.layouts.lecturer')] class extends Component {
         @endif
     </div>
 
-    <!-- Tab Navigation -->
-    <div class="border-b border-zinc-200 dark:border-zinc-700">
-        <nav class="-mb-px flex space-x-8">
-            <button wire:click="setActiveTab('supervisor1')"
-                class="py-2 px-1 border-b-2 font-medium text-sm transition-colors
-                {{ $activeTab === 'supervisor1' 
-                    ? 'border-blue-500 text-blue-600 dark:text-blue-400' 
-                    : 'border-transparent text-zinc-500 hover:text-zinc-700 dark:text-zinc-400 dark:hover:text-zinc-300' }}">
-                Supervisor 1 Students ({{ count($supervisor1Students) }})
-            </button>
-            <button wire:click="setActiveTab('supervisor2')"
-                class="py-2 px-1 border-b-2 font-medium text-sm transition-colors
-                {{ $activeTab === 'supervisor2' 
-                    ? 'border-blue-500 text-blue-600 dark:text-blue-400' 
-                    : 'border-transparent text-zinc-500 hover:text-zinc-700 dark:text-zinc-400 dark:hover:text-zinc-300' }}">
-                Supervisor 2 Students ({{ count($supervisor2Students) }})
-            </button>
-        </nav>
-    </div>
+    @include('partials.session-messages')
 
-
-
-    <!-- Students List -->
     <div class="space-y-4">
-        @php
-            $students = $activeTab === 'supervisor1' ? $supervisor1Students : $supervisor2Students;
-        @endphp
-
-        @if(count($students) === 0)
-            <div class="text-center py-12">
+        @if(count($divisionStudents) === 0)
+            <div class="text-center py-12 bg-white dark:bg-zinc-800 rounded-lg border border-zinc-200 dark:border-zinc-700">
                 <flux:icon.user-group class="mx-auto h-12 w-12 text-zinc-400" />
                 <h3 class="mt-2 text-sm font-medium text-zinc-900 dark:text-zinc-100">No students found</h3>
-                <p class="mt-1 text-sm text-zinc-500 dark:text-zinc-400">
-                    You don't have any students as {{ $activeTab === 'supervisor1' ? 'Supervisor 1' : 'Supervisor 2' }} yet.
-                </p>
+                <p class="mt-1 text-sm text-zinc-500 dark:text-zinc-400">No students assigned to your division yet.</p>
             </div>
         @else
-            @foreach($students as $student)
+            @foreach($divisionStudents as $student)
                 <div class="bg-white dark:bg-zinc-800 rounded-lg border border-zinc-200 dark:border-zinc-700 p-6">
-                    <div class="flex items-start justify-between">
-                        <div class="flex-1">
-                            <div class="flex items-center space-x-3">
-                                <div class="flex-shrink-0">
-                                    <div class="h-10 w-10 rounded-full bg-blue-100 dark:bg-blue-900 flex items-center justify-center">
-                                        <span class="text-sm font-medium text-blue-600 dark:text-blue-400">
-                                            {{ strtoupper(substr($student['name'], 0, 2)) }}
-                                        </span>
-                                    </div>
-                                </div>
-                                <div>
-                                    <h3 class="text-lg font-medium text-zinc-900 dark:text-zinc-100">
-                                        {{ $student['name'] }}
-                                    </h3>
-                                    <p class="text-sm text-zinc-500 dark:text-zinc-400">
-                                        {{ $student['email'] }} • {{ $student['student_number'] }}
-                                    </p>
-                                </div>
-                            </div>
-
-                            <!-- Latest Proposal/Thesis Status -->
-                            @php
-                                $statusLabels = [0 => 'Pending', 1 => 'Revision', 2 => 'Approved by Supervisor', 3 => 'Approved by Head'];
-                                $statusColors = [0 => 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200', 1 => 'bg-orange-100 text-orange-800 dark:bg-orange-900 dark:text-orange-200', 2 => 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200', 3 => 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200'];
-                            @endphp
-                            
-                            @if(isset($student['latest_thesis']) && $student['latest_thesis'])
-                                @php $thesis = $student['latest_thesis']; @endphp
-                                <div class="mt-4 p-4 bg-purple-50 dark:bg-purple-900/20 rounded-lg border border-purple-200 dark:border-purple-800">
-                                    <div class="flex items-center justify-between mb-2">
-                                        <h4 class="text-sm font-medium text-zinc-900 dark:text-zinc-100">Latest Thesis</h4>
-                                        <span class="text-xs text-zinc-500 dark:text-zinc-400">{{ \Carbon\Carbon::parse($thesis['created_at'])->diffForHumans() }}</span>
-                                    </div>
-                                    <div class="flex items-center justify-between">
-                                        <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium {{ $statusColors[$thesis['status']] ?? 'bg-gray-100 text-gray-800' }}">
-                                            {{ $statusLabels[$thesis['status']] ?? 'Unknown' }}
-                                        </span>
-                                        <flux:button wire:click="viewDetails({{ json_encode($student) }})" size="sm" variant="ghost" class="cursor-pointer">View Details</flux:button>
-                                    </div>
-                                </div>
-                            @elseif(isset($student['latest_proposal']) && $student['latest_proposal'])
-                                @php $proposal = $student['latest_proposal']; @endphp
-                                <div class="mt-4 p-4 bg-zinc-50 dark:bg-zinc-700 rounded-lg">
-                                    <div class="flex items-center justify-between mb-2">
-                                        <h4 class="text-sm font-medium text-zinc-900 dark:text-zinc-100">Latest Proposal</h4>
-                                        <span class="text-xs text-zinc-500 dark:text-zinc-400">{{ \Carbon\Carbon::parse($proposal['created_at'])->diffForHumans() }}</span>
-                                    </div>
-                                    <div class="flex items-center justify-between">
-                                        <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium {{ $statusColors[$proposal['status']] ?? 'bg-gray-100 text-gray-800' }}">
-                                            {{ $statusLabels[$proposal['status']] ?? 'Unknown' }}
-                                        </span>
-                                        <flux:button wire:click="viewDetails({{ json_encode($student) }})" size="sm" variant="ghost" class="cursor-pointer">View Details</flux:button>
-                                    </div>
-                                </div>
-                            @else
-                                <div class="mt-4 p-4 bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded-lg">
-                                    <p class="text-sm text-yellow-700 dark:text-yellow-300">No submission yet.</p>
-                                </div>
-                            @endif
+                    <div class="flex items-center space-x-3 mb-4">
+                        <div class="h-10 w-10 rounded-full bg-blue-100 dark:bg-blue-900 flex items-center justify-center">
+                            <span class="text-sm font-medium text-blue-600 dark:text-blue-400">{{ strtoupper(substr($student['name'], 0, 2)) }}</span>
                         </div>
-
-                        <!-- Role Badge -->
-                        <div class="flex-shrink-0 ml-4">
-                            <span class="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium
-                                {{ $activeTab === 'supervisor1' 
-                                    ? 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200' 
-                                    : 'bg-zinc-100 text-zinc-800 dark:bg-zinc-700 dark:text-zinc-200' }}">
-                                {{ $activeTab === 'supervisor1' ? 'Supervisor 1' : 'Supervisor 2' }}
-                            </span>
+                        <div>
+                            <h3 class="text-lg font-medium text-zinc-900 dark:text-zinc-100">{{ $student['name'] }}</h3>
+                            <p class="text-sm text-zinc-500 dark:text-zinc-400">{{ $student['email'] }} • {{ $student['student_number'] }}</p>
                         </div>
                     </div>
+
+                    @php
+                        $statusLabels = [0 => 'Pending', 1 => 'Revision', 2 => 'Approved by Supervisor', 3 => 'Approved by Head'];
+                        $statusColors = [0 => 'bg-yellow-100 text-yellow-800', 1 => 'bg-orange-100 text-orange-800', 2 => 'bg-blue-100 text-blue-800', 3 => 'bg-green-100 text-green-800'];
+                    @endphp
+                    
+                    @if(isset($student['latest_thesis']) && $student['latest_thesis'])
+                        @php $thesis = $student['latest_thesis']; @endphp
+                        <div class="p-4 bg-purple-50 dark:bg-purple-900/20 rounded-lg border border-purple-200 dark:border-purple-800">
+                            <div class="flex items-center justify-between">
+                                <div>
+                                    <h4 class="text-sm font-medium text-zinc-900 dark:text-zinc-100">Latest Thesis</h4>
+                                    <span class="px-2.5 py-0.5 rounded-full text-xs font-medium {{ $statusColors[$thesis['status']] }} mt-1 inline-block">{{ $statusLabels[$thesis['status']] }}</span>
+                                </div>
+                                <flux:button wire:click="viewDetails({{ json_encode($student) }})" size="sm" variant="ghost" class="cursor-pointer">View Details</flux:button>
+                            </div>
+                        </div>
+                    @elseif(isset($student['latest_proposal']) && $student['latest_proposal'])
+                        @php $proposal = $student['latest_proposal']; @endphp
+                        <div class="p-4 bg-zinc-50 dark:bg-zinc-700 rounded-lg">
+                            <div class="flex items-center justify-between">
+                                <div>
+                                    <h4 class="text-sm font-medium text-zinc-900 dark:text-zinc-100">Latest Proposal</h4>
+                                    <span class="px-2.5 py-0.5 rounded-full text-xs font-medium {{ $statusColors[$proposal['status']] }} mt-1 inline-block">{{ $statusLabels[$proposal['status']] }}</span>
+                                </div>
+                                <flux:button wire:click="viewDetails({{ json_encode($student) }})" size="sm" variant="ghost" class="cursor-pointer">View Details</flux:button>
+                            </div>
+                        </div>
+                    @else
+                        <div class="p-4 bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded-lg">
+                            <p class="text-sm text-yellow-700 dark:text-yellow-300">No submission yet.</p>
+                        </div>
+                    @endif
                 </div>
             @endforeach
         @endif
@@ -266,8 +211,6 @@ new #[Layout('components.layouts.lecturer')] class extends Component {
         <flux:modal wire:model="showDetailModal" class="max-w-4xl">
             <flux:heading size="lg">{{ $selectedStudent['name'] }} - Submission History</flux:heading>
             
-            @include('partials.session-messages')
-
             @php
                 $statusLabels = [0 => 'Pending', 1 => 'Revision', 2 => 'Approved by Supervisor', 3 => 'Approved by Head'];
                 $statusColors = [0 => 'bg-yellow-100 text-yellow-800', 1 => 'bg-orange-100 text-orange-800', 2 => 'bg-blue-100 text-blue-800', 3 => 'bg-green-100 text-green-800'];
@@ -293,7 +236,7 @@ new #[Layout('components.layouts.lecturer')] class extends Component {
                                     @if($thesis['file_path'])
                                         <flux:button wire:click="viewPdf('{{ $thesis['file_path'] }}')" size="sm" variant="ghost" class="cursor-pointer">View PDF</flux:button>
                                     @endif
-                                    @if($thesis['status'] == 0 && $activeTab === 'supervisor1')
+                                    @if($thesis['status'] == 2)
                                         <flux:button wire:click="confirmAccept('{{ $thesis['id'] }}', 'thesis')" size="sm" variant="primary" class="cursor-pointer">Accept</flux:button>
                                         <flux:button wire:click="confirmDecline('{{ $thesis['id'] }}', 'thesis')" size="sm" variant="danger" class="cursor-pointer">Decline</flux:button>
                                     @endif
@@ -324,8 +267,8 @@ new #[Layout('components.layouts.lecturer')] class extends Component {
                                     @if($proposal['file_path'])
                                         <flux:button wire:click="viewPdf('{{ $proposal['file_path'] }}')" size="sm" variant="ghost" class="cursor-pointer">View PDF</flux:button>
                                     @endif
-                                    @if($proposal['status'] == 0 && $activeTab === 'supervisor1')
-                                        <flux:button wire:click="confirmAccept('{{ $proposal['id'] }}', 'proposal', '{{ $selectedStudent['division_id'] ?? null }}')" size="sm" variant="primary" class="cursor-pointer">Accept</flux:button>
+                                    @if($proposal['status'] == 2)
+                                        <flux:button wire:click="confirmAccept('{{ $proposal['id'] }}', 'proposal')" size="sm" variant="primary" class="cursor-pointer">Accept</flux:button>
                                         <flux:button wire:click="confirmDecline('{{ $proposal['id'] }}', 'proposal')" size="sm" variant="danger" class="cursor-pointer">Decline</flux:button>
                                     @endif
                                 </div>
@@ -345,18 +288,7 @@ new #[Layout('components.layouts.lecturer')] class extends Component {
     @if($showAcceptModal)
         <flux:modal wire:model="showAcceptModal" class="max-w-md">
             <flux:heading size="lg">Accept {{ $selectedProposal['type'] === 'thesis' ? 'Thesis' : 'Proposal' }}</flux:heading>
-            <p class="text-sm text-zinc-600 dark:text-zinc-400 mt-2">{{ $selectedProposal['type'] === 'thesis' ? 'Accept this thesis submission?' : 'Select division and accept this proposal.' }}</p>
-            
-            @if($selectedProposal['type'] === 'proposal')
-                <flux:select wire:model="selectedDivision" label="Assign to Division" required class="mt-4">
-                    <option value="">Select Division</option>
-                    @foreach($divisions as $division)
-                        <option value="{{ $division['id'] }}">{{ $division['name'] }}</option>
-                    @endforeach
-                </flux:select>
-                @error('selectedDivision') <span class="text-red-500 text-xs">{{ $message }}</span> @enderror
-            @endif
-            
+            <p class="text-sm text-zinc-600 dark:text-zinc-400 mt-2">Approve this as division head?</p>
             <flux:input wire:model="comment" label="Comment (Optional)" placeholder="Add a comment..." class="mt-4" />
             <div class="flex gap-2 mt-6">
                 <flux:spacer />
@@ -368,9 +300,9 @@ new #[Layout('components.layouts.lecturer')] class extends Component {
 
     @if($showDeclineModal)
         <flux:modal wire:model="showDeclineModal" class="max-w-md">
-            <flux:heading size="lg">Decline Proposal</flux:heading>
-            <p class="text-sm text-zinc-600 dark:text-zinc-400 mt-2">Please provide a reason for declining this proposal.</p>
-            <flux:textarea wire:model="comment" label="Reason (Required)" placeholder="Explain why you're declining..." rows="4" class="mt-4" required />
+            <flux:heading size="lg">Decline {{ $selectedProposal['type'] === 'thesis' ? 'Thesis' : 'Proposal' }}</flux:heading>
+            <p class="text-sm text-zinc-600 dark:text-zinc-400 mt-2">Provide reason for declining.</p>
+            <flux:textarea wire:model="comment" label="Reason (Required)" placeholder="Explain why..." rows="4" class="mt-4" required />
             @error('comment') <span class="text-red-500 text-xs">{{ $message }}</span> @enderror
             <div class="flex gap-2 mt-6">
                 <flux:spacer />

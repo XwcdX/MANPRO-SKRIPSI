@@ -22,6 +22,7 @@ class Student extends Authenticatable implements MustVerifyEmail
         'name',
         'email',
         'password',
+        'division_id',
         'thesis_title',
         'thesis_description',
         'status',
@@ -151,5 +152,10 @@ class Student extends Authenticatable implements MustVerifyEmail
     public function topicApplications()
     {
         return $this->hasMany(TopicApplication::class);
+    }
+
+    public function division()
+    {
+        return $this->belongsTo(Division::class);
     }
 }

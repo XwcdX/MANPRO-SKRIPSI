@@ -28,7 +28,7 @@ new class extends Component {
 
                 $q->when($periodId, fn ($query) =>
                     $query->where('period_id', $periodId)
-                )->with(['venue', 'schedule']);
+                )->with(['venue']);
             }
         ]);
 

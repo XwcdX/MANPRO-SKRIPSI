@@ -17,13 +17,17 @@ state([
     'selectedApplicationId' => null,
 ]);
 
-with(fn() => [
-    'applications' => app(SupervisionApplicationService::class)
-        ->getApplicationsForLecturer(auth()->id(), $this->statusFilter, $this->search)
-        ->paginate(15),
-    'currentQuota' => auth()->user()->getAvailableCapacityForPeriod(app(PeriodService::class)->getActivePeriod()?->id ?? null),
-    'activePeriod' => app(PeriodService::class)->getActivePeriod(),
-]);
+with(
+    fn() => [
+        'applications' => app(SupervisionApplicationService::class)
+            ->getApplicationsForLecturer(auth()->id(), $this->statusFilter, $this->search)
+            ->paginate(15),
+        'currentQuota' => auth()
+            ->user()
+            ->getAvailableCapacityForPeriod(app(PeriodService::class)->getActivePeriod()?->id ?? null),
+        'activePeriod' => app(PeriodService::class)->getActivePeriod(),
+    ],
+);
 
 $confirmAccept = function ($applicationId) {
     $this->selectedApplicationId = $applicationId;
@@ -64,12 +68,14 @@ $getActivePeriod = fn(PeriodService $service) => $service->getActivePeriod();
 
 <div>
     <section class="w-full">
-        <div class="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-700 rounded-lg shadow-xl mb-10 p-6 sm:p-8">
+        <div
+            class="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-700 rounded-lg shadow-xl mb-10 p-6 sm:p-8">
             <div class="mb-6">
                 <h1 class="text-3xl text-black dark:text-white font-bold">Student Applications</h1>
                 <p class="text-zinc-600 dark:text-zinc-400 mt-1">Review and manage student supervision requests.</p>
                 @if ($activePeriod)
-                    <div class="mt-3 inline-flex items-center gap-2 px-3 py-1.5 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg">
+                    <div
+                        class="mt-3 inline-flex items-center gap-2 px-3 py-1.5 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg">
                         <span class="text-sm text-blue-900 dark:text-blue-200">
                             Available Quota: <strong>{{ $currentQuota }}</strong> students
                         </span>
@@ -79,7 +85,7 @@ $getActivePeriod = fn(PeriodService $service) => $service->getActivePeriod();
 
             <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
                 <div>
-                    <select wire:model.live="statusFilter" 
+                    <select wire:model.live="statusFilter"
                         class="w-full px-4 py-2 rounded-lg border border-zinc-300 dark:border-zinc-600 bg-white dark:bg-zinc-800 text-black dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500">
                         <option value="pending">Pending</option>
                         <option value="accepted">Accepted</option>
@@ -87,7 +93,8 @@ $getActivePeriod = fn(PeriodService $service) => $service->getActivePeriod();
                     </select>
                 </div>
                 <div>
-                    <input wire:model.live.debounce.300ms="search" type="text" placeholder="Search by student name or email..."
+                    <input wire:model.live.debounce.300ms="search" type="text"
+                        placeholder="Search by student name or email..."
                         class="w-full px-4 py-2 rounded-lg border border-zinc-300 dark:border-zinc-600 bg-white dark:bg-zinc-800 text-black dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500">
                 </div>
             </div>
@@ -100,13 +107,25 @@ $getActivePeriod = fn(PeriodService $service) => $service->getActivePeriod();
                 <table class="min-w-full divide-y divide-zinc-200 dark:divide-zinc-700">
                     <thead class="bg-zinc-50 dark:bg-zinc-800">
                         <tr>
-                            <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-zinc-500 dark:text-zinc-300 uppercase tracking-wider">Student</th>
-                            <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-zinc-500 dark:text-zinc-300 uppercase tracking-wider">Period</th>
-                            <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-zinc-500 dark:text-zinc-300 uppercase tracking-wider">Role</th>
-                            <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-zinc-500 dark:text-zinc-300 uppercase tracking-wider">Thesis Title</th>
-                            <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-zinc-500 dark:text-zinc-300 uppercase tracking-wider">Applied</th>
+                            <th scope="col"
+                                class="px-6 py-3 text-left text-xs font-medium text-zinc-500 dark:text-zinc-300 uppercase tracking-wider">
+                                Student</th>
+                            <th scope="col"
+                                class="px-6 py-3 text-left text-xs font-medium text-zinc-500 dark:text-zinc-300 uppercase tracking-wider">
+                                Period</th>
+                            <th scope="col"
+                                class="px-6 py-3 text-left text-xs font-medium text-zinc-500 dark:text-zinc-300 uppercase tracking-wider">
+                                Role</th>
+                            <th scope="col"
+                                class="px-6 py-3 text-left text-xs font-medium text-zinc-500 dark:text-zinc-300 uppercase tracking-wider">
+                                Thesis Title</th>
+                            <th scope="col"
+                                class="px-6 py-3 text-left text-xs font-medium text-zinc-500 dark:text-zinc-300 uppercase tracking-wider">
+                                Applied</th>
                             @if ($statusFilter === 'pending')
-                                <th scope="col" class="px-6 py-3 text-right text-xs font-medium text-zinc-500 dark:text-zinc-300 uppercase tracking-wider">Actions</th>
+                                <th scope="col"
+                                    class="px-6 py-3 text-right text-xs font-medium text-zinc-500 dark:text-zinc-300 uppercase tracking-wider">
+                                    Actions</th>
                             @endif
                         </tr>
                     </thead>
@@ -114,14 +133,17 @@ $getActivePeriod = fn(PeriodService $service) => $service->getActivePeriod();
                         @forelse ($applications as $application)
                             <tr class="hover:bg-zinc-50 dark:hover:bg-zinc-800/50">
                                 <td class="px-6 py-4 whitespace-nowrap">
-                                    <div class="text-sm font-medium text-zinc-900 dark:text-white">{{ $application->student->name }}</div>
-                                    <div class="text-sm text-zinc-500 dark:text-zinc-400">{{ $application->student->email }}</div>
+                                    <div class="text-sm font-medium text-zinc-900 dark:text-white">
+                                        {{ $application->student->name }}</div>
+                                    <div class="text-sm text-zinc-500 dark:text-zinc-400">
+                                        {{ $application->student->email }}</div>
                                 </td>
                                 <td class="px-6 py-4 whitespace-nowrap text-sm text-zinc-500 dark:text-zinc-400">
                                     {{ $application->period->name }}
                                 </td>
                                 <td class="px-6 py-4 whitespace-nowrap">
-                                    <span class="px-2.5 py-0.5 rounded-full text-xs font-medium bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-200">
+                                    <span
+                                        class="px-2.5 py-0.5 rounded-full text-xs font-medium bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-200">
                                         {{ $application->proposed_role == 0 ? 'Supervisor 1' : 'Supervisor 2' }}
                                     </span>
                                 </td>
@@ -138,18 +160,12 @@ $getActivePeriod = fn(PeriodService $service) => $service->getActivePeriod();
                                 @if ($statusFilter === 'pending')
                                     <td class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
                                         <div class="flex justify-end items-center gap-2">
-                                            <flux:button 
-                                                wire:click="confirmAccept('{{ $application->id }}')"
-                                                variant="primary" 
-                                                size="sm" 
-                                                class="cursor-pointer">
+                                            <flux:button wire:click="confirmAccept('{{ $application->id }}')"
+                                                variant="primary" size="sm" class="cursor-pointer">
                                                 Accept
                                             </flux:button>
-                                            <flux:button 
-                                                wire:click="confirmDecline('{{ $application->id }}')"
-                                                variant="danger" 
-                                                size="sm" 
-                                                class="cursor-pointer">
+                                            <flux:button wire:click="confirmDecline('{{ $application->id }}')"
+                                                variant="danger" size="sm" class="cursor-pointer">
                                                 Decline
                                             </flux:button>
                                         </div>
@@ -158,7 +174,8 @@ $getActivePeriod = fn(PeriodService $service) => $service->getActivePeriod();
                             </tr>
                         @empty
                             <tr>
-                                <td colspan="{{ $statusFilter === 'pending' ? '6' : '5' }}" class="px-6 py-12 text-center text-sm text-zinc-500 dark:text-zinc-400">
+                                <td colspan="{{ $statusFilter === 'pending' ? '6' : '5' }}"
+                                    class="px-6 py-12 text-center text-sm text-zinc-500 dark:text-zinc-400">
                                     No {{ $statusFilter }} applications found.
                                 </td>
                             </tr>
@@ -173,18 +190,20 @@ $getActivePeriod = fn(PeriodService $service) => $service->getActivePeriod();
         </div>
     </section>
 
-    @if($showAcceptModal)
+    @if ($showAcceptModal)
         <flux:modal name="accept-modal" wire:model="showAcceptModal" class="max-w-md">
             <div class="space-y-6">
                 <flux:heading size="lg">Confirm Acceptance</flux:heading>
-                
+
                 <p class="text-zinc-600 dark:text-zinc-400">
-                    Are you sure you want to accept this student? This action cannot be undone and will update the student's status.
+                    Are you sure you want to accept this student? This action cannot be undone and will update the
+                    student's status.
                 </p>
 
                 <div class="flex gap-2">
                     <flux:spacer />
-                    <flux:button type="button" variant="ghost" wire:click="$set('showAcceptModal', false)" class="cursor-pointer">
+                    <flux:button type="button" variant="ghost" wire:click="$set('showAcceptModal', false)"
+                        class="cursor-pointer">
                         Cancel
                     </flux:button>
                     <flux:button wire:click="accept" variant="primary" class="cursor-pointer">
@@ -195,18 +214,19 @@ $getActivePeriod = fn(PeriodService $service) => $service->getActivePeriod();
         </flux:modal>
     @endif
 
-    @if($showDeclineModal)
+    @if ($showDeclineModal)
         <flux:modal name="decline-modal" wire:model="showDeclineModal" class="max-w-md">
             <div class="space-y-6">
                 <flux:heading size="lg">Confirm Decline</flux:heading>
-                
+
                 <p class="text-zinc-600 dark:text-zinc-400">
                     Are you sure you want to decline this application?
                 </p>
 
                 <div class="flex gap-2">
                     <flux:spacer />
-                    <flux:button type="button" variant="ghost" wire:click="$set('showDeclineModal', false)" class="cursor-pointer">
+                    <flux:button type="button" variant="ghost" wire:click="$set('showDeclineModal', false)"
+                        class="cursor-pointer">
                         Cancel
                     </flux:button>
                     <flux:button wire:click="decline" variant="danger" class="cursor-pointer">
@@ -216,8 +236,4 @@ $getActivePeriod = fn(PeriodService $service) => $service->getActivePeriod();
             </div>
         </flux:modal>
     @endif
-</div>nks() }}
-            </div>
-        </div>
-    </section>
 </div>

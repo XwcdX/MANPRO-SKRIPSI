@@ -46,6 +46,11 @@
                 <flux:navlist.item icon="academic-cap" :href="route('lecturer.my-students.index')"
                     :current="request()->routeIs('lecturer.my-students.*')" wire:navigate>{{ __('My Students') }}
                 </flux:navlist.item>
+                @if(auth()->user()->primary_division_id)
+                    <flux:navlist.item icon="building-library" :href="route('lecturer.division-students.index')"
+                        :current="request()->routeIs('lecturer.division-students.*')" wire:navigate>{{ __('Division Students') }}
+                    </flux:navlist.item>
+                @endif
                 <flux:navlist.item icon="inbox" :href="route('lecturer.applications.index')"
                     :current="request()->routeIs('lecturer.applications.*')" wire:navigate>{{ __('Applications') }}
                 </flux:navlist.item>

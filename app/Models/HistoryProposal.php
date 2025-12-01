@@ -15,6 +15,7 @@ class HistoryProposal extends Model
 
     protected $fillable = [
         'student_id',
+        'division_id',
         'description',
         'file_path',
         'comment',
@@ -24,5 +25,10 @@ class HistoryProposal extends Model
     public function student()
     {
         return $this->belongsTo(Student::class);
+    }
+
+    public function division()
+    {
+        return $this->belongsTo(Division::class);
     }
 }

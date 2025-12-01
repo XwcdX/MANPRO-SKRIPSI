@@ -46,6 +46,7 @@ Route::prefix('lecturer')->name('lecturer.')->middleware(['auth:lecturer', 'veri
     Volt::route('applications', 'lecturer.applications.index')->name('applications.index');
     Volt::route('students', 'lecturer.students.index')->name('students.index');
     Volt::route('my-students', 'lecturer.my-students.index')->name('my-students.index');
+    Volt::route('division-students', 'lecturer.division-students.index')->name('division-students.index')->middleware('division_head');
 
     Route::middleware('permission:administrate,lecturer')->group(function () {
         Volt::route('roles', 'lecturer.roles.index')->name('roles.index');

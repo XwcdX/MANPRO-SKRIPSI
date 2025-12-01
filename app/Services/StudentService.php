@@ -54,9 +54,16 @@ class StudentService
                 $query->whereHas('periods', function($q) use ($periodId) {
                     $q->where('periods.id', $periodId);
                 });
-            })->with(['latestProposal' => function($query) {
-                $query->latest();
-            }])->get()->map(function($student) {
+            })->with([
+                'latestProposal', 
+                'history_proposals' => function($query) {
+                    $query->orderBy('created_at', 'desc');
+                },
+                'latestThesis',
+                'history_theses' => function($query) {
+                    $query->orderBy('created_at', 'desc');
+                }
+            ])->get()->map(function($student) {
                 $data = $student->toArray();
                 $data['student_number'] = explode('@', $student->email)[0];
                 return $data;

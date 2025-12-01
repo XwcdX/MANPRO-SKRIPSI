@@ -2,6 +2,7 @@
 
 use Illuminate\Foundation\Application;
 use App\Http\Middleware\HavePeriodMiddleware;
+use App\Http\Middleware\DivisionHeadOnly;
 use Illuminate\Foundation\Configuration\Exceptions;
 use Illuminate\Foundation\Configuration\Middleware;
 
@@ -18,6 +19,7 @@ return Application::configure(basePath: dirname(__DIR__))
             'permission' => \Spatie\Permission\Middleware\PermissionMiddleware::class,
             'role_or_permission' => \Spatie\Permission\Middleware\RoleOrPermissionMiddleware::class,
             'have_period' => HavePeriodMiddleware::class,
+            'division_head' => DivisionHeadOnly::class,
         ]);
         
         $middleware->redirectGuestsTo(function ($request) {
