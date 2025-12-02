@@ -79,4 +79,31 @@ class StudentService
     {
         return $this->getStudentsByLecturerRole($lecturerId, 1, $periodId);
     }
+
+    public function getDivisionStudents(string $divisionId, ?string $periodId = null): array
+    {
+        return Student::where('division_id', $divisionId)
+            ->when($periodId, function($query) use ($periodId) {
+                $query->whereHas('periods', function($q) use ($periodId) {
+                    $q->where('periods.id', $periodId);
+                });
+            })
+            ->with([
+                'latestProposal',
+                'history_proposals' => function($query) {
+                    $query->orderBy('created_at', 'desc');
+                },
+                'latestThesis',
+                'history_theses' => function($query) {
+                    $query->orderBy('created_at', 'desc');
+                }
+            ])
+            ->get()
+            ->map(function($student) {
+                $data = $student->toArray();
+                $data['student_number'] = explode('@', $student->email)[0];
+                return $data;
+            })
+            ->toArray();
+    }
 }

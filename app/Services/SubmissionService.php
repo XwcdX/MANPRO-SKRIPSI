@@ -12,6 +12,7 @@ use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Http;
 use App\Models\SupervisionApplication;
 use App\Traits\HasPythonVectorization;
+use Illuminate\Support\Facades\Log;
 
 class SubmissionService
 {

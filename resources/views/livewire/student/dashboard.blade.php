@@ -18,11 +18,12 @@ new class extends Component {
         $this->currentStatus = $this->studentStatus;
 
         if (session()->has('info')) {
+            $message = session('info');
             $this->js("
                 Swal.fire({
                     toast: true,
                     icon: 'warning',
-                    title: "{{ session('info') }}",
+                    title: '{$message}',
                     position: 'top-end',
                     timer: null,
                     showConfirmButton: true,

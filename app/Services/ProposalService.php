@@ -4,6 +4,7 @@ namespace App\Services;
 
 use App\Models\HistoryProposal;
 use App\Models\HistoryThesis;
+use App\Models\StudentStatusHistory;
 use Illuminate\Support\Facades\DB;
 
 class ProposalService
@@ -68,6 +69,58 @@ class ProposalService
             $thesis->update([
                 'status' => 1,
                 'comment' => $comment,
+            ]);
+
+            return $thesis->toArray();
+        });
+    }
+
+    public function acceptProposalByHead(string $proposalId, ?string $comment = null): array
+    {
+        return DB::transaction(function () use ($proposalId, $comment) {
+            $proposal = HistoryProposal::with('student')->findOrFail($proposalId);
+            
+            $proposal->update([
+                'status' => 3,
+                'comment' => $comment,
+            ]);
+
+            $previousStatus = $proposal->student->status;
+            $proposal->student->update(['status' => 3]);
+
+            StudentStatusHistory::create([
+                'student_id' => $proposal->student_id,
+                'period_id' => $proposal->student->activePeriod()?->id,
+                'previous_status' => $previousStatus,
+                'new_status' => 3,
+                'changed_by' => auth()->id(),
+                'reason' => 'Proposal approved by division head',
+            ]);
+
+            return $proposal->toArray();
+        });
+    }
+
+    public function acceptThesisByHead(string $thesisId, ?string $comment = null): array
+    {
+        return DB::transaction(function () use ($thesisId, $comment) {
+            $thesis = HistoryThesis::with('student')->findOrFail($thesisId);
+            
+            $thesis->update([
+                'status' => 3,
+                'comment' => $comment,
+            ]);
+
+            $previousStatus = $thesis->student->status;
+            $thesis->student->update(['status' => 6]);
+
+            StudentStatusHistory::create([
+                'student_id' => $thesis->student_id,
+                'period_id' => $thesis->student->activePeriod()?->id,
+                'previous_status' => $previousStatus,
+                'new_status' => 6,
+                'changed_by' => auth()->id(),
+                'reason' => 'Thesis approved by division head',
             ]);
 
             return $thesis->toArray();

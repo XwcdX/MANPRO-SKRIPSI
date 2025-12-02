@@ -45,25 +45,7 @@ new #[Layout('components.layouts.lecturer')] class extends Component {
     public function loadStudents(): void
     {
         $lecturer = auth()->user();
-        
-        $this->divisionStudents = \App\Models\Student::where('division_id', $lecturer->primary_division_id)
-            ->when($this->selectedPeriod, function($query) {
-                $query->whereHas('periods', function($q) {
-                    $q->where('periods.id', $this->selectedPeriod);
-                });
-            })
-            ->with(['latestProposal', 'history_proposals' => function($query) {
-                $query->orderBy('created_at', 'desc');
-            }, 'latestThesis', 'history_theses' => function($query) {
-                $query->orderBy('created_at', 'desc');
-            }])
-            ->get()
-            ->map(function($student) {
-                $data = $student->toArray();
-                $data['student_number'] = explode('@', $student->email)[0];
-                return $data;
-            })
-            ->toArray();
+        $this->divisionStudents = $this->studentService->getDivisionStudents($lecturer->primary_division_id, $this->selectedPeriod);
     }
 
     public function updatedSelectedPeriod(): void
@@ -100,12 +82,10 @@ new #[Layout('components.layouts.lecturer')] class extends Component {
     public function acceptProposal(): void
     {
         if ($this->selectedProposal['type'] === 'thesis') {
-            $thesis = \App\Models\HistoryThesis::findOrFail($this->selectedProposal['id']);
-            $thesis->update(['status' => 3, 'comment' => $this->comment]);
+            $this->proposalService->acceptThesisByHead($this->selectedProposal['id'], $this->comment);
             session()->flash('success', 'Thesis approved by division head.');
         } else {
-            $proposal = \App\Models\HistoryProposal::findOrFail($this->selectedProposal['id']);
-            $proposal->update(['status' => 3, 'comment' => $this->comment]);
+            $this->proposalService->acceptProposalByHead($this->selectedProposal['id'], $this->comment);
             session()->flash('success', 'Proposal approved by division head.');
         }
         $this->showAcceptModal = false;
