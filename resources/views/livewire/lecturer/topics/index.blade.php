@@ -11,13 +11,13 @@ new #[Layout('components.layouts.lecturer')] class extends Component {
 
     public bool $showModal = false;
     public string $search = '';
-    public ?string $filterPeriod = '';
+    // public ?string $filterPeriod = '';
     public ?LecturerTopic $editing = null;
 
     public string $topic = '';
     public string $description = '';
     public int $student_quota = 1;
-    public ?string $period_id = null;
+    // public ?string $period_id = null;
     public bool $is_available = true;
 
     public function mount(): void
@@ -32,10 +32,10 @@ new #[Layout('components.layouts.lecturer')] class extends Component {
         $this->resetPage();
     }
 
-    public function updatingFilterPeriod(): void
-    {
-        $this->resetPage();
-    }
+    // public function updatingFilterPeriod(): void
+    // {
+    //     $this->resetPage();
+    // }
 
     protected function rules()
     {
@@ -43,7 +43,7 @@ new #[Layout('components.layouts.lecturer')] class extends Component {
             'topic' => 'required|string|max:255',
             'description' => 'nullable|string',
             'student_quota' => 'required|integer|min:1|max:10',
-            'period_id' => 'required|uuid|exists:periods,id',
+            // 'period_id' => 'required|uuid|exists:periods,id',
             'is_available' => 'required|boolean',
         ];
     }
@@ -52,16 +52,17 @@ new #[Layout('components.layouts.lecturer')] class extends Component {
     {
         $service = app(TopicService::class);
         $lecturer = auth()->user();
-        $selectedPeriod = $this->filterPeriod ? app(\App\Services\PeriodService::class)->findPeriod($this->filterPeriod) : null;
+        // $selectedPeriod = $this->filterPeriod ? app(\App\Services\PeriodService::class)->findPeriod($this->filterPeriod) : null;
 
         return [
-            'topics' => $service->getTopicsForLecturer($lecturer->id, $this->search, $this->filterPeriod)
+            // 'topics' => $service->getTopicsForLecturer($lecturer->id, $this->search, $this->filterPeriod)
+            'topics' => $service->getTopicsForLecturer($lecturer->id, $this->search)
                 ->paginate(15),
-            'periods' => $service->getActivePeriods(),
+            // 'periods' => $service->getActivePeriods(),
             'lecturer' => $lecturer,
-            'selectedPeriod' => $selectedPeriod,
-            'periodQuota' => $selectedPeriod ? $selectedPeriod->getLecturerQuota($lecturer) : null,
-            'periodCapacity' => $selectedPeriod ? $lecturer->getAvailableCapacityForPeriod($selectedPeriod->id) : null,
+            // 'selectedPeriod' => $selectedPeriod,
+            // 'periodQuota' => $selectedPeriod ? $selectedPeriod->getLecturerQuota($lecturer) : null,
+            // 'periodCapacity' => $selectedPeriod ? $lecturer->getAvailableCapacityForPeriod($selectedPeriod->id) : null,
         ];
     }
 
@@ -83,7 +84,7 @@ new #[Layout('components.layouts.lecturer')] class extends Component {
         $this->topic = $topic->topic;
         $this->description = $topic->description ?? '';
         $this->student_quota = $topic->student_quota;
-        $this->period_id = $topic->period_id;
+        // $this->period_id = $topic->period_id;
         $this->is_available = $topic->is_available;
         $this->showModal = true;
     }
@@ -98,7 +99,7 @@ new #[Layout('components.layouts.lecturer')] class extends Component {
             'topic' => $this->topic,
             'description' => $this->description,
             'student_quota' => $this->student_quota,
-            'period_id' => $this->period_id,
+            // 'period_id' => $this->period_id,
             'is_available' => $this->is_available,
         ];
 
@@ -128,7 +129,8 @@ new #[Layout('components.layouts.lecturer')] class extends Component {
     private function resetInput(): void
     {
         $this->resetErrorBag();
-        $this->reset('topic', 'description', 'student_quota', 'period_id', 'is_available');
+        // $this->reset('topic', 'description', 'student_quota', 'period_id', 'is_available');
+        $this->reset('topic', 'description', 'student_quota', 'is_available');
         $this->student_quota = 1;
         $this->is_available = true;
     }
@@ -156,7 +158,7 @@ new #[Layout('components.layouts.lecturer')] class extends Component {
                         <input wire:model.live.debounce.300ms="search" type="text" placeholder="Search topics..."
                             class="w-full px-4 py-2 rounded-lg border border-zinc-300 dark:border-zinc-600 bg-white dark:bg-zinc-800 text-black dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500">
                     </div>
-                    <div class="w-full sm:w-1/4">
+                    {{-- <div class="w-full sm:w-1/4">
                         <select wire:model.live="filterPeriod"
                             class="w-full px-4 py-2 rounded-lg border border-zinc-300 dark:border-zinc-600 bg-white dark:bg-zinc-800 text-black dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500">
                             <option value="">All Periods</option>
@@ -164,9 +166,9 @@ new #[Layout('components.layouts.lecturer')] class extends Component {
                                 <option value="{{ $period->id }}">{{ $period->name }}</option>
                             @endforeach
                         </select>
-                    </div>
+                    </div> --}}
                 </div>
-                @if($selectedPeriod)
+                {{-- @if($selectedPeriod)
                     <div class="mt-3 text-sm">
                         <span class="text-zinc-600 dark:text-zinc-400">Period Quota: </span>
                         <span class="font-semibold text-zinc-900 dark:text-white">{{ $periodQuota }} students</span>
@@ -174,7 +176,7 @@ new #[Layout('components.layouts.lecturer')] class extends Component {
                         <span class="text-zinc-600 dark:text-zinc-400">Available: </span>
                         <span class="font-semibold {{ $periodCapacity > 0 ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400' }}">{{ $periodCapacity }} slots</span>
                     </div>
-                @endif
+                @endif --}}
             </div>
 
             <hr class="border-t border-zinc-200 dark:border-zinc-700 mb-6">
@@ -188,9 +190,9 @@ new #[Layout('components.layouts.lecturer')] class extends Component {
                             <th
                                 class="px-6 py-3 text-left text-xs font-medium text-zinc-500 dark:text-zinc-300 uppercase tracking-wider">
                                 Topic</th>
-                            <th
+                            {{-- <th
                                 class="px-6 py-3 text-left text-xs font-medium text-zinc-500 dark:text-zinc-300 uppercase tracking-wider">
-                                Period</th>
+                                Period</th> --}}
                             <th
                                 class="px-6 py-3 text-left text-xs font-medium text-zinc-500 dark:text-zinc-300 uppercase tracking-wider">
                                 Quota</th>
@@ -210,21 +212,21 @@ new #[Layout('components.layouts.lecturer')] class extends Component {
                                             {{ Str::limit($topicItem->description, 100) }}</div>
                                     @endif
                                 </td>
-                                <td class="px-6 py-4 whitespace-nowrap text-sm text-zinc-500 dark:text-zinc-400">
+                                {{-- <td class="px-6 py-4 whitespace-nowrap text-sm text-zinc-500 dark:text-zinc-400">
                                     {{ $topicItem->period->name }}
-                                </td>
+                                </td> --}}
                                 <td class="px-6 py-4 whitespace-nowrap text-sm text-zinc-500 dark:text-zinc-400">
                                     {{ $topicItem->student_quota }} student(s)
                                 </td>
                                 <td class="px-6 py-4 whitespace-nowrap">
-                                    @php
+                                    {{-- @php
                                         $periodCapacity = $lecturer->isAtCapacityForPeriod($topicItem->period_id);
-                                    @endphp
-                                    @if ($periodCapacity)
+                                    @endphp --}}
+                                    {{-- @if ($periodCapacity)
                                         <span
                                             class="px-2.5 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200">Period
-                                            Full</span>
-                                    @elseif($topicItem->is_available)
+                                            Full</span> --}}
+                                    @if($topicItem->is_available)
                                         <span
                                             class="px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200">Available</span>
                                     @else
@@ -285,12 +287,12 @@ new #[Layout('components.layouts.lecturer')] class extends Component {
                         @enderror
                     </div>
 
-                    <flux:select wire:model="period_id" label="Period" required>
+                    {{-- <flux:select wire:model="period_id" label="Period" required>
                         <option value="">Select a Period</option>
                         @foreach ($periods as $period)
                             <option value="{{ $period->id }}">{{ $period->name }}</option>
                         @endforeach
-                    </flux:select>
+                    </flux:select> --}}
 
                     <flux:input wire:model="student_quota" type="number" label="Student Quota" min="1"
                         max="10" required />

@@ -14,9 +14,9 @@ class TopicService
             ->when($search, function ($query) use ($search) {
                 $query->where('topic', 'like', '%' . $search . '%');
             })
-            ->when($periodId, function ($query) use ($periodId) {
-                $query->where('period_id', $periodId);
-            })
+            // ->when($periodId, function ($query) use ($periodId) {
+            //     $query->where('period_id', $periodId);
+            // })
             ->latest();
     }
 
