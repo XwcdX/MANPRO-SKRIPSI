@@ -1,9 +1,10 @@
 <?php
 
-use App\Http\Controllers\Auth\AuthController;
-use Illuminate\Support\Facades\Route;
 use Livewire\Volt\Volt;
+use Illuminate\Support\Facades\Route;
+use App\Http\Controllers\ResignController;
 
+use App\Http\Controllers\Auth\AuthController;
 use App\Http\Controllers\Auth\GoogleController;
 
 Route::get('/auth/google', [GoogleController::class, 'redirect'])
@@ -23,6 +24,7 @@ Route::middleware('guest:student,lecturer')->group(function () {
 Route::middleware(['auth:student', 'verified'])->name('student.')->group(function () {
     Route::middleware(['have_period'])->group(function () {
         Volt::route('dashboard', 'student.dashboard')->name('dashboard');
+        Route::post('resign', [ResignController::class, 'resign'])->name('resign');
     });
 
     Volt::route('apply-period', 'student.apply-period')->name('apply-period');
