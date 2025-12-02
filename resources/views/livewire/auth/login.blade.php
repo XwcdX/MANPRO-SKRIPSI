@@ -143,7 +143,7 @@ new #[Layout('components.layouts.auth')] class extends Component {
 
                     <p class="text-xs text-center text-gray-600">
                         Belum punya akun? Login dengan Google atau
-                        <a href="" class="text-gray-900 font-medium hover:underline">
+                        <a href="{{ route('signup') }}" class="text-gray-900 font-medium hover:underline">
                             daftar di sini
                         </a>.
                     </p>

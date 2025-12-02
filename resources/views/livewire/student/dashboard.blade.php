@@ -16,6 +16,21 @@ new class extends Component {
     {
         $this->studentStatus = $this->user->status;
         $this->currentStatus = $this->studentStatus;
+
+        if (session()->has('info')) {
+            $this->js("
+                Swal.fire({
+                    toast: true,
+                    icon: 'warning',
+                    title: "{{ session('info') }}",
+                    position: 'top-end',
+                    timer: null,
+                    showConfirmButton: true,
+                    confirmButtonText: 'Close',
+                    width: '500px'
+                });
+            ");
+        }
     }
 
     #[On('student-status-updated')]

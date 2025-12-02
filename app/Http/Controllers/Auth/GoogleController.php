@@ -39,23 +39,21 @@ class GoogleController extends Controller
         } else {
             $profile = Lecturer::where('email', $email)->first();
         }
+        $isNewUser = false;
 
         if (!$profile) {
-            if ($role === 'student') {
-                $profile = Student::create([
-                    'name' => $name,
-                    'email' => $email,
-                    'password' => bcrypt('default123'),
-                    'email_verified_at' => now(),
-                ]);
-            } else {
-                $profile = Lecturer::create([
-                    'name' => $name,
-                    'email' => $email,
-                    'password' => bcrypt('default123'),
-                    'email_verified_at' => now(),
-                ]);
-            }
+            $isNewUser = true;
+
+            $data = [
+                'name' => $name,
+                'email' => $email,
+                'password' => bcrypt('default123'),
+                'email_verified_at' => now(),
+            ];
+
+            $profile = $role === 'student'
+                ? Student::create($data)
+                : Lecturer::create($data);
         } else {
             if (is_null($profile->email_verified_at)) {
                 $profile->email_verified_at = now();
@@ -65,8 +63,11 @@ class GoogleController extends Controller
 
         Auth::guard($role)->login($profile);
 
-        $route = $role === 'student' ? 'student.dashboard' : 'lecturer.dashboard';
+        if ($isNewUser) {
+            session()->flash('info', 'Akun Anda baru dibuat. Password default: default123');
+        }
 
+        $route = $role === 'student' ? 'student.dashboard' : 'lecturer.dashboard';
         return redirect()->route($route);
     }
 }

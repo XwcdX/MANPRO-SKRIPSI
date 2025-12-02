@@ -17,6 +17,7 @@ Route::middleware('guest:student,lecturer')->group(function () {
     Volt::route('login', 'auth.login')->name('login');
     Volt::route('password/reset', 'auth.password.request')->name('password.request');
     Volt::route('password/reset/{token}', 'auth.password.reset')->name('password.reset');
+    Volt::route('signup', 'auth.signup')->name('signup');
 });
 
 Route::middleware(['auth:student', 'verified'])->name('student.')->group(function () {
