@@ -42,23 +42,17 @@ new class extends Component {
         $existingApplication = null;
         if ($activePeriod) {
             $hasAcceptedTopic = TopicApplication::where('student_id', $student->id)
-                ->where('period_id', $activePeriod->id)
                 ->where('status', 'accepted')
                 ->exists();
                 
             $existingApplication = TopicApplication::where('student_id', $student->id)
-                ->where('period_id', $activePeriod->id)
                 ->whereIn('status', ['pending'])
                 ->first();
         }
 
-        $query = LecturerTopic::with(['lecturer.divisions', 'period'])
+        $query = LecturerTopic::with(['lecturer.divisions'])
             ->where('is_available', true)
             ->where('student_quota', '>', 0);
-
-        if ($activePeriod) {
-            $query->where('period_id', $activePeriod->id);
-        }
 
         if ($this->search) {
             $query->where(function($q) {
@@ -97,7 +91,6 @@ new class extends Component {
         }
 
         $existingApplication = TopicApplication::where('student_id', auth()->id())
-            ->where('period_id', $activePeriod->id)
             ->whereIn('status', ['pending'])
             ->first();
 
@@ -130,7 +123,6 @@ new class extends Component {
         }
 
         $existingApplication = TopicApplication::where('student_id', auth()->id())
-            ->where('period_id', $activePeriod->id)
             ->whereIn('status', ['pending'])
             ->first();
 
@@ -219,9 +211,6 @@ new class extends Component {
                                 <p class="text-gray-700 mt-3">{{ $topic->description }}</p>
                             @endif
                             <div class="flex gap-4 mt-3 text-sm">
-                                <span class="text-gray-600">
-                                    <strong>Period:</strong> {{ $topic->period->name }}
-                                </span>
                                 <span class="text-gray-600">
                                     <strong>Capacity:</strong> {{ $topic->student_quota }} student(s)
                                 </span>

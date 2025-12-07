@@ -46,7 +46,21 @@
                 </button>
                 <h1 class="text-xl font-semibold text-gray-800">Pendaftaran & Penjadwalan Proposal Skripsi</h1>
             </div>
-            <div class="text-md font-medium text-gray-700">Hello, {{ $user->name ?? 'Unknown User' }}</div>
+            <div class="relative">
+                <button id="userMenuButton" class="text-md font-medium text-gray-700">
+                    Hello, {{ $user->name ?? 'Unknown User' }}
+                </button>
+
+                <div id="userMenu" class="absolute right-0 mt-2 w-52 bg-white shadow-lg rounded-lg py-2 hidden">
+                    <button id="resignButton" class="block w-full text-left px-4 py-2 text-red-600 hover:bg-gray-100">
+                        Mengundurkan Diri
+                    </button>
+
+                    <form id="resignForm" action="{{ route('student.resign') }}" method="POST" class="hidden">
+                        @csrf
+                    </form>
+                </div>
+            </div>
         </header>
 
         <div class="flex-1 p-8 overflow-y-auto min-w-0">
@@ -57,6 +71,35 @@
 
 <script>
     document.addEventListener('DOMContentLoaded', function() {
+        const resignBtn = document.getElementById('resignButton');
+        const resignForm = document.getElementById('resignForm');
+
+        resignBtn.addEventListener('click', () => {
+            Swal.fire({
+                title: 'Yakin ingin mengundurkan diri',
+                text: 'Tindakan ini akan menghapus semua data terkait proses skripsi kamu',
+                icon: 'warning',
+                showCancelButton: true,
+                confirmButtonText: 'Ya, lanjut',
+                cancelButtonText: 'Batal'
+            }).then((result) => {
+                if (result.isConfirmed) {
+                    resignForm.submit();
+                }
+            });
+        });
+        const menuButton = document.getElementById('userMenuButton');
+        const userMenu = document.getElementById('userMenu');
+
+        menuButton.addEventListener('click', () => {
+            userMenu.classList.toggle('hidden');
+        });
+
+        document.addEventListener('click', (e) => {
+            if (!menuButton.contains(e.target) && !userMenu.contains(e.target)) {
+                userMenu.classList.add('hidden');
+            }
+        });
         const sidebarEl = document.getElementById('sidebar');
         const hamburgerEl = document.getElementById('hamburger');
         const blurOverlayEl = document.getElementById('blurOverlay');

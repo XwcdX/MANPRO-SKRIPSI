@@ -2,10 +2,12 @@
 
 namespace App\Services;
 
-use App\Models\Student;
 use App\Models\Period;
-use Illuminate\Pagination\LengthAwarePaginator;
+use App\Models\Student;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Pagination\LengthAwarePaginator;
 
 class StudentService
 {
@@ -105,5 +107,52 @@ class StudentService
                 return $data;
             })
             ->toArray();
+    }
+
+    public function resign(Student $user)
+    {
+        try {
+            DB::transaction(function () use ($user) {
+
+                $user->periods()
+                    ->wherePivot('is_active', true)
+                    ->detach();
+
+                $user->update([
+                    'division_id' => null,
+                    'thesis_title' => null,
+                    'thesis_description' => null,
+                    'status' => 0,
+                    'head_division_comment' => null,
+                    'revision_notes' => null,
+                    'final_thesis_path' => null,
+                    'final_proposal_path' => null,
+                    'due_date' => null
+                ]);
+
+                $user->supervisors()
+                    ->wherePivot('status', true)
+                    ->detach();
+
+                $user->examiners()
+                    ->wherePivot('status', true)
+                    ->detach();
+
+                $user->topicApplications()->delete();
+                $user->history_proposals()->delete();
+                $user->history_theses()->delete();
+                $user->supervisionApplications()->delete();
+            });
+
+        } catch (\Throwable $e) {
+
+            Log::error('Resign failed', [
+                'user_id' => $user->id,
+                'message' => $e->getMessage(),
+                'trace' => $e->getTraceAsString()
+            ]);
+
+            throw $e;
+        }
     }
 }
