@@ -10,15 +10,15 @@ return new class extends Migration {
         Schema::create('lecturer_availability', function (Blueprint $table) {
             $table->id();
             $table->foreignUuid('lecturer_id')->constrained('lecturers')->onDelete('cascade');
-            $table->foreignUuid('period_id')->constrained('periods')->onDelete('cascade');
+            $table->foreignUuid('period_schedule_id')->constrained('period_schedules')->onDelete('cascade');
             $table->enum('type', ['proposal_hearing', 'thesis'])->comment('Type of schedule');
             $table->date('date');
             $table->string('time_slot')->comment('30-minute slots based on period schedule time');
             $table->boolean('is_available')->default(false)->comment('false = busy, true = available');
             $table->timestamps();
 
-            $table->unique(['lecturer_id', 'period_id', 'type', 'date', 'time_slot'], 'lecturer_availability_unique');
-            $table->index(['period_id', 'type', 'date']);
+            $table->unique(['lecturer_id', 'period_schedule_id', 'type', 'date', 'time_slot'], 'lecturer_availability_unique');
+            $table->index(['period_schedule_id', 'type', 'date']);
         });
     }
 

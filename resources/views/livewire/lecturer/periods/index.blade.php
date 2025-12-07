@@ -15,36 +15,63 @@ state([
     'showModal' => false,
     'search' => '',
     'editing' => null,
-    'name' => '',
     'start_date' => '',
     'end_date' => '',
-    'registration_end' => '',
-    'proposal_hearing_start' => '',
-    'proposal_hearing_end' => '',
-    'thesis_start' => '',
-    'thesis_end' => '',
-    'schedule_start_time' => '07:30',
-    'schedule_end_time' => '18:00',
+    'proposal_schedules' => [],
+    'thesis_schedules' => [],
+    'proposal_schedule_start_time' => '07:30',
+    'proposal_schedule_end_time' => '18:00',
+    'proposal_slot_duration' => 45,
+    'thesis_schedule_start_time' => '07:30',
+    'thesis_schedule_end_time' => '18:00',
+    'thesis_slot_duration' => 45,
+    'break_start_time' => '12:00',
+    'break_end_time' => '13:00',
     'default_quota' => 12,
     'showArchiveConfirmModal' => false,
     'archivingPeriodId' => null,
+    'serverToday' => fn() => now()->format('Y-m-d'),
 ]);
 
 rules(
     fn() => [
-        'name' => ['required', 'string', 'max:255', Rule::unique('periods')->ignore($this->editing?->id)],
         'start_date' => 'required|date',
         'end_date' => 'required|date|after:start_date',
-        'registration_end' => 'required|date|after:start_date|before_or_equal:end_date',
-        'proposal_hearing_start' => 'nullable|date|after:registration_end',
-        'proposal_hearing_end' => 'nullable|date|after:proposal_hearing_start',
-        'thesis_start' => 'nullable|date|after:proposal_hearing_end',
-        'thesis_end' => 'nullable|date|after:thesis_start|before_or_equal:end_date',
-        'schedule_start_time' => 'required|date_format:H:i',
-        'schedule_end_time' => 'required|date_format:H:i|after:schedule_start_time',
+        'proposal_schedules.*.start_date' => 'required|date|after_or_equal:start_date|before_or_equal:end_date',
+        'proposal_schedules.*.end_date' => 'required|date|after:proposal_schedules.*.start_date|before_or_equal:end_date',
+        'thesis_schedules.*.start_date' => 'required|date|after_or_equal:start_date|before_or_equal:end_date',
+        'thesis_schedules.*.end_date' => 'required|date|after:thesis_schedules.*.start_date|before_or_equal:end_date',
+        'proposal_schedule_start_time' => 'required|date_format:H:i',
+        'proposal_schedule_end_time' => 'required|date_format:H:i|after:proposal_schedule_start_time',
+        'proposal_slot_duration' => 'required|integer|min:15|max:120',
+        'thesis_schedule_start_time' => 'required|date_format:H:i',
+        'thesis_schedule_end_time' => 'required|date_format:H:i|after:thesis_schedule_start_time',
+        'thesis_slot_duration' => 'required|integer|min:15|max:120',
+        'break_start_time' => 'required|date_format:H:i',
+        'break_end_time' => 'required|date_format:H:i|after:break_start_time',
         'default_quota' => 'required|integer|min:1|max:50',
     ],
 );
+
+$validateScheduleCollision = function () {
+    // Check for collisions in proposal schedules
+    foreach ($this->proposal_schedules as $index => $schedule) {
+        if (!empty($schedule['start_date']) && !empty($schedule['end_date'])) {
+            if ($this->checkDateCollision($schedule['start_date'], $schedule['end_date'], $index, 'proposal')) {
+                $this->addError("proposal_schedules.{$index}.start_date", 'This date range overlaps with another schedule.');
+            }
+        }
+    }
+    
+    // Check for collisions in thesis schedules
+    foreach ($this->thesis_schedules as $index => $schedule) {
+        if (!empty($schedule['start_date']) && !empty($schedule['end_date'])) {
+            if ($this->checkDateCollision($schedule['start_date'], $schedule['end_date'], $index, 'thesis')) {
+                $this->addError("thesis_schedules.{$index}.start_date", 'This date range overlaps with another schedule.');
+            }
+        }
+    }
+};
 
 with(
     fn() => [
@@ -74,11 +101,19 @@ $archivePeriod = function (PeriodService $service) {
 
 $create = function () {
     $this->resetErrorBag();
-    $this->reset('name', 'start_date', 'end_date', 'registration_end', 'proposal_hearing_start', 'proposal_hearing_end', 'thesis_start', 'thesis_end', 'schedule_start_time', 'schedule_end_time', 'default_quota', 'editing');
+    $this->reset();
     $this->editing = new Period();
     $this->default_quota = 12;
-    $this->schedule_start_time = '07:30';
-    $this->schedule_end_time = '18:00';
+    $this->proposal_schedule_start_time = '07:30';
+    $this->proposal_schedule_end_time = '18:00';
+    $this->proposal_slot_duration = 45;
+    $this->thesis_schedule_start_time = '07:30';
+    $this->thesis_schedule_end_time = '18:00';
+    $this->thesis_slot_duration = 45;
+    $this->break_start_time = '12:00';
+    $this->break_end_time = '13:00';
+    $this->proposal_schedules = [];
+    $this->thesis_schedules = [];
     $this->showModal = true;
 };
 
@@ -87,18 +122,32 @@ $edit = function (Period $period) {
     $this->reset();
 
     $this->editing = $period;
-    $this->name = $period->name;
-
     $this->start_date = Carbon::parse($period->start_date)->format('Y-m-d');
     $this->end_date = Carbon::parse($period->end_date)->format('Y-m-d');
-    $this->registration_end = Carbon::parse($period->registration_end)->format('Y-m-d');
-    $this->proposal_hearing_start = $period->proposal_hearing_start ? Carbon::parse($period->proposal_hearing_start)->format('Y-m-d') : '';
-    $this->proposal_hearing_end = $period->proposal_hearing_end ? Carbon::parse($period->proposal_hearing_end)->format('Y-m-d') : '';
-    $this->thesis_start = $period->thesis_start ? Carbon::parse($period->thesis_start)->format('Y-m-d') : '';
-    $this->thesis_end = $period->thesis_end ? Carbon::parse($period->thesis_end)->format('Y-m-d') : '';
-    $this->schedule_start_time = $period->schedule_start_time ? substr($period->schedule_start_time, 0, 5) : '07:30';
-    $this->schedule_end_time = $period->schedule_end_time ? substr($period->schedule_end_time, 0, 5) : '18:00';
-
+    
+    // Load existing schedules
+    $this->proposal_schedules = $period->schedules()->where('type', 'proposal_hearing')->get()->map(function($schedule) {
+        return [
+            'start_date' => Carbon::parse($schedule->start_date)->format('Y-m-d'),
+            'end_date' => Carbon::parse($schedule->end_date)->format('Y-m-d'),
+        ];
+    })->toArray();
+    
+    $this->thesis_schedules = $period->schedules()->where('type', 'thesis_defense')->get()->map(function($schedule) {
+        return [
+            'start_date' => Carbon::parse($schedule->start_date)->format('Y-m-d'),
+            'end_date' => Carbon::parse($schedule->end_date)->format('Y-m-d'),
+        ];
+    })->toArray();
+    
+    $this->proposal_schedule_start_time = $period->proposal_schedule_start_time ? substr($period->proposal_schedule_start_time, 0, 5) : '07:30';
+    $this->proposal_schedule_end_time = $period->proposal_schedule_end_time ? substr($period->proposal_schedule_end_time, 0, 5) : '18:00';
+    $this->proposal_slot_duration = $period->proposal_slot_duration ?? 45;
+    $this->thesis_schedule_start_time = $period->thesis_schedule_start_time ? substr($period->thesis_schedule_start_time, 0, 5) : '07:30';
+    $this->thesis_schedule_end_time = $period->thesis_schedule_end_time ? substr($period->thesis_schedule_end_time, 0, 5) : '18:00';
+    $this->thesis_slot_duration = $period->thesis_slot_duration ?? 45;
+    $this->break_start_time = $period->break_start_time ? substr($period->break_start_time, 0, 5) : '12:00';
+    $this->break_end_time = $period->break_end_time ? substr($period->break_end_time, 0, 5) : '13:00';
     $this->default_quota = $period->default_quota;
 
     $this->showModal = true;
@@ -106,27 +155,127 @@ $edit = function (Period $period) {
 
 $save = function (PeriodService $service) {
     $this->validate();
-    $data = $this->only(['name', 'start_date', 'end_date', 'registration_end', 'proposal_hearing_start', 'proposal_hearing_end', 'thesis_start', 'thesis_end', 'schedule_start_time', 'schedule_end_time', 'default_quota']);
+    $this->validateScheduleCollision();
+    
+    if ($this->getErrorBag()->any()) {
+        return;
+    }
+    
+    $data = $this->only([
+        'start_date', 'end_date', 'default_quota',
+        'proposal_schedule_start_time', 'proposal_schedule_end_time', 'proposal_slot_duration',
+        'thesis_schedule_start_time', 'thesis_schedule_end_time', 'thesis_slot_duration',
+        'break_start_time', 'break_end_time'
+    ]);
+    $data['proposal_schedules'] = $this->proposal_schedules;
+    $data['thesis_schedules'] = $this->thesis_schedules;
 
-    foreach (['proposal_hearing_start', 'proposal_hearing_end', 'thesis_start', 'thesis_end'] as $field) {
-        if (empty($data[$field])) {
-            $data[$field] = null;
+    try {
+        if ($this->editing && $this->editing->exists) {
+            $service->updatePeriod($this->editing, $data);
+        } else {
+            $service->createPeriod($data);
+        }
+        $this->showModal = false;
+        session()->flash('success', 'Period saved successfully.');
+        $this->resetPage();
+    } catch (\Exception $e) {
+        $this->showModal = false;
+        if ($e->getMessage() === 'Period already exists') {
+            session()->flash('error', 'Period already exists.');
+        } else {
+            session()->flash('error', 'Failed to save period.');
         }
     }
-
-    if ($this->editing && $this->editing->exists) {
-        $service->updatePeriod($this->editing, $data);
-    } else {
-        $service->createPeriod($data);
-    }
-    session()->flash('success', 'Period saved successfully.');
-    $this->showModal = false;
-    $this->resetPage();
 };
 
 $deletePeriod = function (Period $period, PeriodService $service) {
     $service->deletePeriod($period->id);
     session()->flash('success', 'Period deleted successfully.');
+};
+
+$addProposalSchedule = function () {
+    $this->proposal_schedules[] = ['start_date' => '', 'end_date' => ''];
+};
+
+$removeProposalSchedule = function ($index) {
+    unset($this->proposal_schedules[$index]);
+    $this->proposal_schedules = array_values($this->proposal_schedules);
+};
+
+$addThesisSchedule = function () {
+    $this->thesis_schedules[] = ['start_date' => '', 'end_date' => ''];
+};
+
+$removeThesisSchedule = function ($index) {
+    unset($this->thesis_schedules[$index]);
+    $this->thesis_schedules = array_values($this->thesis_schedules);
+};
+
+// Computed properties for form state
+$getCanFillOtherFields = function () {
+    if (empty($this->start_date) || empty($this->end_date)) {
+        return false;
+    }
+    return strtotime($this->end_date) > strtotime($this->start_date);
+};
+
+$getUsedDateRanges = function () {
+    $ranges = [];
+    
+    // Add proposal schedule ranges
+    foreach ($this->proposal_schedules as $schedule) {
+        if (!empty($schedule['start_date']) && !empty($schedule['end_date'])) {
+            $ranges[] = [
+                'start' => $schedule['start_date'],
+                'end' => $schedule['end_date'],
+                'type' => 'proposal'
+            ];
+        }
+    }
+    
+    // Add thesis schedule ranges
+    foreach ($this->thesis_schedules as $schedule) {
+        if (!empty($schedule['start_date']) && !empty($schedule['end_date'])) {
+            $ranges[] = [
+                'start' => $schedule['start_date'],
+                'end' => $schedule['end_date'],
+                'type' => 'thesis'
+            ];
+        }
+    }
+    
+    return $ranges;
+};
+
+$checkDateCollision = function ($startDate, $endDate, $excludeIndex = null, $excludeType = null) {
+    if (empty($startDate) || empty($endDate)) {
+        return false;
+    }
+    
+    $ranges = $this->getUsedDateRanges();
+    
+    foreach ($ranges as $index => $range) {
+        // Skip if this is the range we're currently editing
+        if ($excludeIndex !== null && $excludeType !== null) {
+            $currentSchedules = $excludeType === 'proposal' ? $this->proposal_schedules : $this->thesis_schedules;
+            if (isset($currentSchedules[$excludeIndex])) {
+                $currentRange = $currentSchedules[$excludeIndex];
+                if ($range['start'] === $currentRange['start_date'] && $range['end'] === $currentRange['end_date']) {
+                    continue;
+                }
+            }
+        }
+        
+        // Check for overlap
+        if (($startDate >= $range['start'] && $startDate <= $range['end']) ||
+            ($endDate >= $range['start'] && $endDate <= $range['end']) ||
+            ($startDate <= $range['start'] && $endDate >= $range['end'])) {
+            return true;
+        }
+    }
+    
+    return false;
 };
 
 ?>
@@ -156,6 +305,12 @@ $deletePeriod = function (Period $period, PeriodService $service) {
 
             <hr class="border-t border-zinc-200 dark:border-zinc-700 mb-6">
 
+            @if (session('error'))
+                <div class="mb-4 p-4 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg text-red-800 dark:text-red-200 text-sm sm:text-base">
+                    {{ session('error') }}
+                </div>
+            @endif
+
             @include('partials.session-messages')
 
             <div class="overflow-x-auto">
@@ -179,7 +334,7 @@ $deletePeriod = function (Period $period, PeriodService $service) {
                     </thead>
                     <tbody class="bg-white dark:bg-zinc-900 divide-y divide-zinc-200 dark:divide-zinc-700">
                         @forelse ($periods as $period)
-                            <tr class="hover:bg-zinc-50 dark:hover:bg-zinc-800/50">
+                            <tr class="hover:bg-zinc-600 dark:hover:bg-zinc-800">
                                 <td
                                     class="px-6 py-4 whitespace-nowrap text-sm font-medium text-zinc-900 dark:text-white">
                                     {{ $period->name }}</td>
@@ -254,51 +409,178 @@ $deletePeriod = function (Period $period, PeriodService $service) {
                 <flux:heading size="lg">{{ $editing && $editing->exists ? 'Edit Period' : 'Create New Period' }}
                 </flux:heading>
 
-                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4" x-data="{ errors: @js($errors->any()) }">
+                    <flux:input wire:model.live="start_date" type="date" label="Period Start Date" required />
+                    @if(empty($start_date))
+                        <flux:input type="date" label="Period End Date" required disabled />
+                    @else
+                        <flux:input wire:model.live="end_date" type="date" label="Period End Date" required min="{{ $start_date }}" />
+                    @endif
+                    
+                    <flux:input wire:model="default_quota" type="number" label="Default Lecturer Quota" required placeholder="12" />
+                    <div></div>
+                    
                     <div class="md:col-span-2">
-                        <flux:input wire:model="name" label="Period Name" placeholder="e.g., Odd 2025/2026" required />
-                    </div>
-
-                    <flux:input wire:model="start_date" type="date" label="Period Start Date" required />
-                    <flux:input wire:model="end_date" type="date" label="Period End Date" required />
-
-                    <flux:input wire:model="registration_end" type="date" label="Registration Close Date" required />
-                    <flux:input wire:model="default_quota" type="number" label="Default Lecturer Quota" required
-                        placeholder="12" />
-
-                    <div class="md:col-span-2 border-t border-zinc-200 dark:border-zinc-700 pt-4 mt-2">
-                        <h3 class="text-sm font-semibold text-zinc-700 dark:text-zinc-300 mb-3">Proposal Hearing Period
-                            (Optional)</h3>
-                        <div class="grid grid-cols-2 gap-4">
-                            <flux:input wire:model="proposal_hearing_start" type="date" label="Start Date" />
-                            <flux:input wire:model="proposal_hearing_end" type="date" label="End Date" />
+                        <div class="p-3 bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded-lg text-xs sm:text-sm text-amber-900 dark:text-amber-200">
+                            <p class="font-semibold mb-1">📝 Automatic Features:</p>
+                            <ul class="list-disc list-inside space-y-1">
+                                <li><strong>Period Name:</strong> Auto-generated based on end date (Gasal/Genap)</li>
+                                <li><strong>Registration Close:</strong> Auto-calculated (1 day before earliest proposal hearing)</li>
+                            </ul>
                         </div>
                     </div>
 
                     <div class="md:col-span-2 border-t border-zinc-200 dark:border-zinc-700 pt-4 mt-2">
-                        <h3 class="text-sm font-semibold text-zinc-700 dark:text-zinc-300 mb-3">Thesis Defense Period
-                            (Optional)</h3>
-                        <div class="grid grid-cols-2 gap-4">
-                            <flux:input wire:model="thesis_start" type="date" label="Start Date" />
-                            <flux:input wire:model="thesis_end" type="date" label="End Date" />
+                        <div class="flex items-center justify-between mb-3">
+                            <h3 class="text-sm font-semibold text-zinc-700 dark:text-zinc-300">Proposal Hearing Periods (Optional)</h3>
+                            @if($this->getCanFillOtherFields())
+                                <flux:button type="button" wire:click="addProposalSchedule" variant="outline" size="sm" class="cursor-pointer">
+                                    Add Period
+                                </flux:button>
+                            @else
+                                <flux:button type="button" variant="outline" size="sm" disabled>
+                                    Add Period
+                                </flux:button>
+                            @endif
                         </div>
+                        @if(!$this->getCanFillOtherFields())
+                            <div class="p-3 bg-zinc-50 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-600 rounded-lg text-sm text-zinc-500 dark:text-zinc-400 italic">
+                                Please fill in Period Start Date and End Date first to add proposal hearing periods.
+                            </div>
+                        @else
+                            @foreach($proposal_schedules as $index => $schedule)
+                                @php
+                                    $isPast = !empty($schedule['end_date']) && $schedule['end_date'] < $this->serverToday;
+                                    $isLast = $index === count($proposal_schedules) - 1;
+                                @endphp
+                                <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-3 p-3 border border-zinc-200 dark:border-zinc-600 rounded-lg {{ $isPast ? 'bg-zinc-50 dark:bg-zinc-800/50' : '' }}">
+                                    @if($isLast)
+                                        <flux:input wire:model.live="proposal_schedules.{{ $index }}.start_date" type="date" label="Start Date" 
+                                            min="{{ $start_date }}" max="{{ $end_date }}" />
+                                        @if(empty($schedule['start_date']))
+                                            <flux:input type="date" label="End Date" disabled />
+                                        @else
+                                            <flux:input wire:model="proposal_schedules.{{ $index }}.end_date" type="date" label="End Date" 
+                                                min="{{ $schedule['start_date'] }}" max="{{ $end_date }}" />
+                                        @endif
+                                    @else
+                                        <flux:input wire:model="proposal_schedules.{{ $index }}.start_date" type="date" label="Start Date" 
+                                            min="{{ $start_date }}" max="{{ $end_date }}" disabled />
+                                        <flux:input wire:model="proposal_schedules.{{ $index }}.end_date" type="date" label="End Date" 
+                                            min="{{ $start_date }}" max="{{ $end_date }}" disabled />
+                                    @endif
+                                    <div class="col-span-1 sm:col-span-2 flex justify-end">
+                                        @if(!$isPast)
+                                            <flux:button type="button" wire:click="removeProposalSchedule({{ $index }})" variant="danger" size="sm" class="cursor-pointer">
+                                                Remove
+                                            </flux:button>
+                                        @else
+                                            <span class="text-xs text-zinc-500 italic">Completed - Cannot be removed</span>
+                                        @endif
+                                    </div>
+                                </div>
+                            @endforeach
+                            @if(empty($proposal_schedules))
+                                <p class="text-sm text-zinc-500 dark:text-zinc-400 italic">No proposal hearing periods added yet.</p>
+                            @endif
+                        @endif
                     </div>
 
                     <div class="md:col-span-2 border-t border-zinc-200 dark:border-zinc-700 pt-4 mt-2">
-                        <h3 class="text-sm font-semibold text-zinc-700 dark:text-zinc-300 mb-3">Schedule Time Range
-                        </h3>
-                        <div class="grid grid-cols-2 gap-4">
-                            <flux:input wire:model="schedule_start_time" type="time" label="Start Time" />
-                            <flux:input wire:model="schedule_end_time" type="time" label="End Time" />
+                        <div class="flex items-center justify-between mb-3">
+                            <h3 class="text-sm font-semibold text-zinc-700 dark:text-zinc-300">Thesis Defense Periods (Optional)</h3>
+                            @if($this->getCanFillOtherFields())
+                                <flux:button type="button" wire:click="addThesisSchedule" variant="outline" size="sm" class="cursor-pointer">
+                                    Add Period
+                                </flux:button>
+                            @else
+                                <flux:button type="button" variant="outline" size="sm" disabled>
+                                    Add Period
+                                </flux:button>
+                            @endif
                         </div>
-                        <p class="text-xs text-zinc-500 mt-2">This defines the available time slots for scheduling
-                            proposal hearings and thesis defenses.</p>
+                        @if(!$this->getCanFillOtherFields())
+                            <div class="p-3 bg-zinc-50 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-600 rounded-lg text-sm text-zinc-500 dark:text-zinc-400 italic">
+                                Please fill in Period Start Date and End Date first to add thesis defense periods.
+                            </div>
+                        @else
+                            @foreach($thesis_schedules as $index => $schedule)
+                                @php
+                                    $isPast = !empty($schedule['end_date']) && $schedule['end_date'] < $this->serverToday;
+                                    $isLast = $index === count($thesis_schedules) - 1;
+                                @endphp
+                                <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-3 p-3 border border-zinc-200 dark:border-zinc-600 rounded-lg {{ $isPast ? 'bg-zinc-50 dark:bg-zinc-800/50' : '' }}">
+                                    @if($isLast)
+                                        <flux:input wire:model.live="thesis_schedules.{{ $index }}.start_date" type="date" label="Start Date" 
+                                            min="{{ $start_date }}" max="{{ $end_date }}" />
+                                        @if(empty($schedule['start_date']))
+                                            <flux:input type="date" label="End Date" disabled />
+                                        @else
+                                            <flux:input wire:model="thesis_schedules.{{ $index }}.end_date" type="date" label="End Date" 
+                                                min="{{ $schedule['start_date'] }}" max="{{ $end_date }}" />
+                                        @endif
+                                    @else
+                                        <flux:input wire:model="thesis_schedules.{{ $index }}.start_date" type="date" label="Start Date" 
+                                            min="{{ $start_date }}" max="{{ $end_date }}" disabled />
+                                        <flux:input wire:model="thesis_schedules.{{ $index }}.end_date" type="date" label="End Date" 
+                                            min="{{ $start_date }}" max="{{ $end_date }}" disabled />
+                                    @endif
+                                    <div class="col-span-1 sm:col-span-2 flex justify-end">
+                                        @if(!$isPast)
+                                            <flux:button type="button" wire:click="removeThesisSchedule({{ $index }})" variant="danger" size="sm" class="cursor-pointer">
+                                                Remove
+                                            </flux:button>
+                                        @else
+                                            <span class="text-xs text-zinc-500 italic">Completed - Cannot be removed</span>
+                                        @endif
+                                    </div>
+                                </div>
+                            @endforeach
+                            @if(empty($thesis_schedules))
+                                <p class="text-sm text-zinc-500 dark:text-zinc-400 italic">No thesis defense periods added yet.</p>
+                            @endif
+                        @endif
+                    </div>
+
+                    <div class="md:col-span-2 border-t border-zinc-200 dark:border-zinc-700 pt-4 mt-2">
+                        <h3 class="text-sm font-semibold text-zinc-700 dark:text-zinc-300 mb-3">Break Time Configuration</h3>
+                        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                            <flux:input wire:model="break_start_time" type="time" label="Break Start Time" 
+                                :disabled="!$this->getCanFillOtherFields()" />
+                            <flux:input wire:model="break_end_time" type="time" label="Break End Time" 
+                                :disabled="!$this->getCanFillOtherFields()" />
+                        </div>
+                        <p class="text-xs text-zinc-500 mt-2">Break time will be automatically excluded from all scheduling.</p>
+                    </div>
+                    
+                    <div class="md:col-span-2 border-t border-zinc-200 dark:border-zinc-700 pt-4 mt-2">
+                        <h3 class="text-sm font-semibold text-zinc-700 dark:text-zinc-300 mb-3">Proposal Hearing Schedule Configuration</h3>
+                        <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                            <flux:input wire:model="proposal_schedule_start_time" type="time" label="Start Time" 
+                                :disabled="!$this->getCanFillOtherFields()" />
+                            <flux:input wire:model="proposal_schedule_end_time" type="time" label="End Time" 
+                                :disabled="!$this->getCanFillOtherFields()" />
+                            <flux:input wire:model="proposal_slot_duration" type="number" label="Slot Duration (minutes)" placeholder="45" 
+                                :disabled="!$this->getCanFillOtherFields()" />
+                        </div>
+                    </div>
+                    
+                    <div class="md:col-span-2 border-t border-zinc-200 dark:border-zinc-700 pt-4 mt-2">
+                        <h3 class="text-sm font-semibold text-zinc-700 dark:text-zinc-300 mb-3">Thesis Defense Schedule Configuration</h3>
+                        <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                            <flux:input wire:model="thesis_schedule_start_time" type="time" label="Start Time" 
+                                :disabled="!$this->getCanFillOtherFields()" />
+                            <flux:input wire:model="thesis_schedule_end_time" type="time" label="End Time" 
+                                :disabled="!$this->getCanFillOtherFields()" />
+                            <flux:input wire:model="thesis_slot_duration" type="number" label="Slot Duration (minutes)" placeholder="45" 
+                                :disabled="!$this->getCanFillOtherFields()" />
+                        </div>
+                        <p class="text-xs text-zinc-500 mt-2">These settings define the available time slots for each type of presentation.</p>
                     </div>
 
                     <div class="md:col-span-2">
-                        <div
-                            class="p-4 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg text-sm text-blue-900 dark:text-blue-200">
-                            <p class="font-semibold mb-1">Automatic Status:</p>
+                        <div class="p-3 sm:p-4 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg text-xs sm:text-sm text-blue-900 dark:text-blue-200">
+                            <p class="font-semibold mb-1">📊 Period Status Flow:</p>
                             <ul class="list-disc list-inside space-y-1">
                                 <li>Before start date: <strong>Upcoming</strong></li>
                                 <li>Start date to registration close: <strong>Registration Open</strong></li>
@@ -306,8 +588,7 @@ $deletePeriod = function (Period $period, PeriodService $service) {
                                 <li>After end date: <strong>Completed</strong> (can be archived)</li>
                             </ul>
                         </div>
-                        <p class="text-xs text-zinc-500 mt-2">The default quota applies to all lecturers. You can
-                            adjust individual lecturer quotas after creating the period.</p>
+                        <p class="text-xs text-zinc-500 mt-2">💡 The default quota applies to all lecturers. Individual quotas can be adjusted after creating the period.</p>
                     </div>
                 </div>
 

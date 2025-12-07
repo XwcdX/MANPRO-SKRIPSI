@@ -4,6 +4,7 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Concerns\HasUuids;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class Period extends Model
 {
@@ -14,12 +15,14 @@ class Period extends Model
         'start_date',
         'end_date',
         'registration_end',
-        'proposal_hearing_start',
-        'proposal_hearing_end',
-        'thesis_start',
-        'thesis_end',
-        'schedule_start_time',
-        'schedule_end_time',
+        'proposal_schedule_start_time',
+        'proposal_schedule_end_time',
+        'thesis_schedule_start_time',
+        'thesis_schedule_end_time',
+        'break_start_time',
+        'break_end_time',
+        'proposal_slot_duration',
+        'thesis_slot_duration',
         'default_quota',
         'archived_at',
     ];
@@ -28,13 +31,69 @@ class Period extends Model
         'start_date' => 'datetime',
         'end_date' => 'datetime',
         'registration_end' => 'datetime',
-        'proposal_hearing_start' => 'datetime',
-        'proposal_hearing_end' => 'datetime',
-        'thesis_start' => 'datetime',
-        'thesis_end' => 'datetime',
         'default_quota' => 'integer',
+        'proposal_slot_duration' => 'integer',
+        'thesis_slot_duration' => 'integer',
         'archived_at' => 'datetime',
     ];
+
+    /**
+     * Get all schedules for this period.
+     *
+     * @return \Illuminate\Database\Eloquent\Relations\HasMany
+     */
+    public function schedules(): HasMany
+    {
+        return $this->hasMany(PeriodSchedule::class);
+    }
+
+    /**
+     * Get only proposal hearing schedules.
+     *
+     * @return \Illuminate\Database\Eloquent\Relations\HasMany
+     */
+    public function proposalHearings(): HasMany
+    {
+        return $this->hasMany(PeriodSchedule::class)->where('type', 'proposal_hearing');
+    }
+
+    /**
+     * Get only thesis defense schedules.
+     *
+     * @return \Illuminate\Database\Eloquent\Relations\HasMany
+     */
+    public function thesisDefenses(): HasMany
+    {
+        return $this->hasMany(PeriodSchedule::class)->where('type', 'thesis_defense');
+    }
+
+    /**
+     * Check if registration is open.
+     * Registration is open as long as there's at least one proposal hearing that hasn't started.
+     *
+     * @return bool
+     */
+    public function isRegistrationOpen(): bool
+    {
+        if ($this->archived_at) {
+            return false;
+        }
+
+        $now = now();
+
+        // Check if we're past registration_end date
+        if ($this->registration_end && $now->gt($this->registration_end)) {
+            return false;
+        }
+
+        // Check if there's any proposal hearing that hasn't started yet
+        $upcomingProposalHearing = $this->schedules()
+            ->where('type', 'proposal_hearing')
+            ->where('start_date', '>', $now)
+            ->exists();
+
+        return $upcomingProposalHearing;
+    }
 
     public function getStatusAttribute(): string
     {
@@ -52,23 +111,29 @@ class Period extends Model
             return 'upcoming';
         }
 
-        if ($this->registration_end && $now->between($this->start_date, $this->registration_end)) {
+        if ($this->isRegistrationOpen()) {
             return 'registration_open';
         }
 
-        if ($this->proposal_hearing_start && $this->registration_end && $now->between($this->registration_end, $this->proposal_hearing_start)) {
-            return 'proposal_in_progress';
-        }
+        // Check if any proposal hearing is active
+        $activeProposalHearing = $this->schedules()
+            ->where('type', 'proposal_hearing')
+            ->where('start_date', '<=', $now)
+            ->where('end_date', '>=', $now)
+            ->exists();
 
-        if ($this->proposal_hearing_start && $this->proposal_hearing_end && $now->between($this->proposal_hearing_start, $this->proposal_hearing_end)) {
+        if ($activeProposalHearing) {
             return 'proposal_hearing';
         }
 
-        if ($this->thesis_start && $now->between($this->proposal_hearing_end ?? $this->registration_end, $this->thesis_start)) {
-            return 'thesis_in_progress';
-        }
+        // Check if any thesis defense is active
+        $activeThesisDefense = $this->schedules()
+            ->where('type', 'thesis_defense')
+            ->where('start_date', '<=', $now)
+            ->where('end_date', '>=', $now)
+            ->exists();
 
-        if ($this->thesis_start && $this->thesis_end && $now->between($this->thesis_start, $this->thesis_end)) {
+        if ($activeThesisDefense) {
             return 'thesis';
         }
 
@@ -103,10 +168,7 @@ class Period extends Model
             ->first();
     }
 
-    public function isRegistrationOpen(): bool
-    {
-        return $this->status === 'registration_open';
-    }
+
 
     public function isInProgress(): bool
     {

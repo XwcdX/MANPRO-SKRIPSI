@@ -14,7 +14,7 @@ class ThesisPresentation extends Model
     public $incrementing = false;
 
     protected $fillable = [
-        'period_id',
+        'period_schedule_id',
         'venue_id',
         'student_id',
         'presentation_date',
@@ -38,9 +38,21 @@ class ThesisPresentation extends Model
         return $this->belongsTo(PresentationVenue::class);
     }
 
+    public function periodSchedule()
+    {
+        return $this->belongsTo(PeriodSchedule::class);
+    }
+
     public function period()
     {
-        return $this->belongsTo(Period::class);
+        return $this->hasOneThrough(
+            Period::class,
+            PeriodSchedule::class,
+            'id',
+            'id',
+            'period_schedule_id',
+            'period_id'
+        );
     }
 
     public function examiners()

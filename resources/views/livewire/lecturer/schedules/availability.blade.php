@@ -22,44 +22,53 @@ class extends Component {
 
     public function generateTimeSlots(): void
     {
-        if (!$this->selectedPeriod) {
+        if (!$this->selectedPeriod || !$this->selectedType) {
             $this->timeSlots = [];
             return;
         }
 
         $period = app(PeriodService::class)->findPeriod($this->selectedPeriod);
-        if (!$period) {
+        $schedule = \App\Models\PeriodSchedule::find($this->selectedType);
+        if (!$period || !$schedule) {
             $this->timeSlots = [];
             return;
         }
 
-        $this->timeSlots = app(AvailabilityService::class)->generateTimeSlots($period);
+        $this->timeSlots = app(AvailabilityService::class)->generateSimpleTimeSlots($period, $schedule->type);
     }
 
     public function updatedSelectedPeriod(): void
     {
-        $this->generateTimeSlots();
-        $this->loadAvailability();
+        $this->selectedType = '';
+        $this->dates = [];
+        $this->availability = [];
+        $this->timeSlots = [];
     }
 
     public function updatedSelectedType(): void
     {
-        $this->loadAvailability();
+        // Force reset
+        $this->reset(['dates', 'availability', 'timeSlots']);
+        
+        if ($this->selectedType) {
+            $this->generateTimeSlots();
+            $this->loadAvailability();
+        }
     }
 
     public function loadAvailability(): void
     {
-        if (!$this->selectedPeriod) {
+        if (!$this->selectedPeriod || !$this->selectedType) {
             $this->dates = [];
             $this->availability = [];
             return;
         }
 
         $service = app(AvailabilityService::class);
-        $period = app(PeriodService::class)->findPeriod($this->selectedPeriod);
-        if (!$period) return;
+        $schedule = \App\Models\PeriodSchedule::find($this->selectedType);
+        if (!$schedule) return;
 
-        $this->dates = $service->getDateRange($period, $this->selectedType);
+        $this->dates = $service->getDateRangeForSchedule($schedule);
         
         if (empty($this->dates)) {
             $this->availability = [];
@@ -68,7 +77,6 @@ class extends Component {
 
         $this->availability = $service->loadAvailability(
             auth()->id(),
-            $this->selectedPeriod,
             $this->selectedType,
             $this->dates,
             $this->timeSlots
@@ -79,10 +87,13 @@ class extends Component {
 
     public function saveChanges(array $availability): void
     {
+        $schedule = \App\Models\PeriodSchedule::find($this->selectedType);
+        if (!$schedule) return;
+
         app(AvailabilityService::class)->saveAvailability(
             auth()->id(),
-            $this->selectedPeriod,
             $this->selectedType,
+            $schedule->type,
             $availability
         );
 
@@ -94,7 +105,51 @@ class extends Component {
     {
         return [
             'periods' => app(AvailabilityService::class)->getPeriodsWithSchedules(),
+            'availableTypes' => $this->getAvailableTypes(),
         ];
+    }
+
+    private function getAvailableTypes(): array
+    {
+        if (!$this->selectedPeriod) {
+            return [];
+        }
+
+        $period = app(PeriodService::class)->findPeriod($this->selectedPeriod);
+        if (!$period) {
+            return [];
+        }
+
+        $today = now()->format('Y-m-d');
+        $types = [];
+        
+        $proposalSchedules = $period->schedules()
+            ->where('type', 'proposal_hearing')
+            ->where('start_date', '>=', $today)
+            ->orderBy('start_date')
+            ->get();
+        
+        $thesisSchedules = $period->schedules()
+            ->where('type', 'thesis_defense')
+            ->where('start_date', '>=', $today)
+            ->orderBy('start_date')
+            ->get();
+        
+        foreach ($proposalSchedules as $index => $schedule) {
+            $label = 'Proposal Hearing ' . ($index + 1) . ' (' . 
+                    Carbon::parse($schedule->start_date)->format('d M') . ' - ' . 
+                    Carbon::parse($schedule->end_date)->format('d M') . ')';
+            $types[$schedule->id] = $label;
+        }
+        
+        foreach ($thesisSchedules as $index => $schedule) {
+            $label = 'Thesis Defense ' . ($index + 1) . ' (' . 
+                    Carbon::parse($schedule->start_date)->format('d M') . ' - ' . 
+                    Carbon::parse($schedule->end_date)->format('d M') . ')';
+            $types[$schedule->id] = $label;
+        }
+        
+        return $types;
     }
 };
 
@@ -119,16 +174,20 @@ class extends Component {
                     </select>
                 </div>
 
-                <div>
-                    <label class="block text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-2">Schedule Type</label>
-                    <select wire:model.live="selectedType" class="w-full px-4 py-2 rounded-lg border border-zinc-300 dark:border-zinc-600 bg-white dark:bg-zinc-800 text-black dark:text-white">
-                        <option value="proposal_hearing">Proposal Hearing</option>
-                        <option value="thesis">Thesis Defense</option>
-                    </select>
-                </div>
+                @if($selectedPeriod)
+                    <div>
+                        <label class="block text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-2">Schedule Type</label>
+                        <select wire:model.live="selectedType" class="w-full px-4 py-2 rounded-lg border border-zinc-300 dark:border-zinc-600 bg-white dark:bg-zinc-800 text-black dark:text-white">
+                            <option value="">Select Type</option>
+                            @foreach($availableTypes as $value => $label)
+                                <option value="{{ $value }}">{{ $label }}</option>
+                            @endforeach
+                        </select>
+                    </div>
+                @endif
             </div>
 
-            <div x-data="{ 
+            <div wire:key="schedule-{{ $selectedType }}" x-data="{ 
                 availability: @js($availability),
                 hasChanges: false,
                 toggleSlot(key) {
@@ -166,16 +225,19 @@ class extends Component {
                                             @foreach($dates as $date)
                                                 @php
                                                     $key = $date . '_' . $time;
-                                                    $isAvailable = $availability[$key] ?? false;
+                                                    $isBreak = str_contains($time, 'Break');
                                                 @endphp
                                                 <td class="px-2 py-2">
-                                                    @php $key = $date . '_' . $time; @endphp
-                                                    <div 
-                                                        @click="toggleSlot('{{ $key }}')"
-                                                        :class="availability['{{ $key }}'] ? 'bg-green-500 hover:bg-green-600' : 'bg-red-500 hover:bg-red-600'"
-                                                        class="w-full h-12 rounded cursor-pointer"
-                                                        :title="availability['{{ $key }}'] ? 'Available' : 'Busy'">
-                                                    </div>
+                                                    @if($isBreak)
+                                                        <div class="w-full h-12 rounded bg-zinc-300 dark:bg-zinc-700" title="Break Time"></div>
+                                                    @else
+                                                        <div 
+                                                            @click="toggleSlot('{{ $key }}')"
+                                                            :class="availability['{{ $key }}'] ? 'bg-green-500 hover:bg-green-600' : 'bg-red-500 hover:bg-red-600'"
+                                                            class="w-full h-12 rounded cursor-pointer"
+                                                            :title="availability['{{ $key }}'] ? 'Available' : 'Busy'">
+                                                        </div>
+                                                    @endif
                                                 </td>
                                             @endforeach
                                         </tr>
