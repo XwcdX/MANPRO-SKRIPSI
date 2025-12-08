@@ -441,7 +441,7 @@ new #[Layout('components.layouts.lecturer')] class extends Component {
                                     </div>
                                 </td>
                                 <td class="px-6 py-4 text-sm text-zinc-500 dark:text-zinc-400">
-                                    <div>{{ \Carbon\Carbon::parse($presentation->presentation_date)->format('d M Y') }}
+                                    <div>{{ Carbon::parse($presentation->presentation_date)->format('d M Y') }}
                                     </div>
                                     <div class="text-xs">{{ substr($presentation->start_time, 0, 5) }} -
                                         {{ substr($presentation->end_time, 0, 5) }}</div>
