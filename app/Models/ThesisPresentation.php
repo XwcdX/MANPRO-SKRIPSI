@@ -20,7 +20,6 @@ class ThesisPresentation extends Model
         'presentation_date',
         'start_time',
         'end_time',
-        'presentation_type',
         'notes',
     ];
 

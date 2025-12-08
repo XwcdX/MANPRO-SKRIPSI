@@ -60,7 +60,7 @@ class PeriodService
         $endMonth = Carbon::parse($endDate)->month;
         $endYear = Carbon::parse($endDate)->year;
         
-        if ($endMonth <= 2) {
+        if ($endMonth >= 9 || $endMonth <= 2) {
             return "Gasal " . ($endYear - 1) . "/" . $endYear;
         } else {
             return "Genap " . $endYear . "/" . ($endYear + 1);

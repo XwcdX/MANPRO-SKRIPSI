@@ -16,10 +16,14 @@ return new class extends Migration {
             $table->date('start_date');
             $table->date('end_date');
             $table->date('registration_end');
-            $table->date('proposal_hearing_start')->nullable();
-            $table->date('proposal_hearing_end')->nullable();
-            $table->date('thesis_start')->nullable();
-            $table->date('thesis_end')->nullable();
+            $table->time('proposal_schedule_start_time')->default('08:00:00')->comment('Daily start time for proposal presentations');
+            $table->time('proposal_schedule_end_time')->default('16:00:00')->comment('Daily end time for proposal presentations');
+            $table->time('thesis_schedule_start_time')->default('08:00:00')->comment('Daily start time for thesis presentations');
+            $table->time('thesis_schedule_end_time')->default('16:00:00')->comment('Daily end time for thesis presentations');
+            $table->time('break_start_time')->default('12:00:00')->comment('Break start time (applies to all schedules)');
+            $table->time('break_end_time')->default('13:00:00')->comment('Break end time (applies to all schedules)');
+            $table->unsignedInteger('proposal_slot_duration')->default(45)->comment('Duration of each proposal presentation slot in minutes');
+            $table->unsignedInteger('thesis_slot_duration')->default(45)->comment('Duration of each thesis presentation slot in minutes');
             $table->enum('status', [
                 'upcoming',
                 'registration_open',
