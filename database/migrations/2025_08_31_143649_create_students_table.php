@@ -24,6 +24,8 @@ return new class extends Migration {
             $table->text('revision_notes')->nullable();
             $table->string('final_thesis_path', 500)->nullable();
             $table->string('final_proposal_path', 500)->nullable();
+            $table->foreignUuid('proposal_schedule_id')->nullable()->constrained('period_schedules')->onDelete('restrict');
+            $table->foreignUuid('final_schedule_id')->nullable()->constrained('period_schedules')->onDelete('restrict');
             $table->date('due_date')->nullable();
             $table->boolean('is_active')->default(true);
             $table->timestamps();

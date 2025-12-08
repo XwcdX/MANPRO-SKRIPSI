@@ -30,6 +30,8 @@ class Student extends Authenticatable implements MustVerifyEmail
         'revision_notes',
         'final_thesis_path',
         'final_proposal_path',
+        'proposal_schedule_id',
+        'final_schedule_id',
         'due_date',
         'is_active',
     ];
@@ -120,6 +122,18 @@ class Student extends Authenticatable implements MustVerifyEmail
     public function activePeriod()
     {
         return $this->periods()->wherePivot('is_active', true)->first();
+    }
+
+    public function proposalSchedule()
+    {
+        return $this->belongsTo(PeriodSchedule::class, 'proposal_schedule_id')
+                    ->where('type', 'proposal_hearing');
+    }
+
+    public function finalSchedule()
+    {
+        return $this->belongsTo(PeriodSchedule::class, 'final_schedule_id')
+                    ->where('type', 'thesis_defense');
     }
 
     public function periods()

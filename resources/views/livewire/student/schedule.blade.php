@@ -1,38 +1,100 @@
 <?php
 
+use App\Models\PeriodSchedule;
 use App\Traits\WithAuthUser;
 use Livewire\Volt\Component;
+use App\Services\ScheduleSelectionService;
 
 new class extends Component {
     use WithAuthUser;
 
-    public string $type = 'proposal'; // proposal | final
+    public string $type = 'proposal';
 
     public $presentation = null;
-    public string $tanggal = '';
-    public string $jam = '';
-    public string $lokasi = '';
-    public string $status = '';
+
+    public array $schedules = [];
+    public ?string $selectedScheduleId = null;
+
+    public ?string $tanggal = '';
+    public ?string $jam = '';
+    public ?string $lokasi = '';
+    public ?string $status = '';
+
+    public ?PeriodSchedule $selectedSchedule = null; // WAJIB
+
+    private function scheduleColumn()
+    {
+        return $this->type === 'final'
+            ? 'final_schedule_id'
+            : 'proposal_schedule_id';
+    }
+
+    private function scheduleType()
+    {
+        return $this->type === 'final'
+            ? 'thesis_defense'
+            : 'proposal_hearing';
+    }
 
     public function mount($type = 'proposal')
     {
         $this->type = $type;
 
-        $relation = $type === 'final'
+        $period = $this->user->activePeriod();
+        if (!$period) return;
+
+        $periodId = $period->id;
+
+        $scheduleType = $this->scheduleType();
+        $column = $this->scheduleColumn();
+
+        $this->schedules = PeriodSchedule::where('period_id', $periodId)
+            ->where('type', $scheduleType)
+            ->orderBy('start_date', 'asc')
+            ->get()
+            ->toArray();
+
+        $this->selectedScheduleId = $this->user->$column;
+
+        if ($this->selectedScheduleId) {
+            $this->selectedSchedule = PeriodSchedule::find($this->selectedScheduleId);
+
+            if ($this->selectedSchedule) {
+                $deadline = \Carbon\Carbon::parse($this->selectedSchedule->start_date)->subWeek();
+
+                if (now()->greaterThan($deadline)) {
+                    $this->loadPresentationDetail();
+                    return;
+                }
+            }
+        }
+    }
+
+    private function loadPresentationDetail()
+    {
+        $relation = $this->type === 'final'
             ? 'finalPresentations'
             : 'proposalPresentations';
 
-        $this->user->load([
-            $relation => function ($q) {
-                $periodId = $this->user->activePeriod()?->id;
+        $column = $this->scheduleColumn();
 
-                $q->when($periodId, fn ($query) =>
-                    $query->where('period_id', $periodId)
-                )->with(['venue']);
-            }
+        $this->user->load([
+            $relation => fn ($q) => $q
+                ->when($this->user->$column, fn($query) =>
+                    $query->where('period_schedule_id', $this->user->$column)
+                )
+                ->with(['venue'])
         ]);
 
         $this->presentation = $this->user->$relation->first();
+
+        if (!$this->presentation && $this->selectedScheduleId) {
+            $this->tanggal = null;
+            $this->jam = null;
+            $this->lokasi = null;
+            $this->status = 'Waiting';
+            return;
+        }
 
         if ($this->presentation) {
             $this->setupPresentationData();
@@ -47,8 +109,7 @@ new class extends Component {
             ->translatedFormat('d F Y');
 
         $this->jam = \Carbon\Carbon::parse($p->start_time)->format('H:i')
-            . ' - ' .
-            \Carbon\Carbon::parse($p->end_time)->format('H:i');
+            . ' - ' . \Carbon\Carbon::parse($p->end_time)->format('H:i');
 
         $this->lokasi = $p->venue
             ? $p->venue->name . ' - ' . $p->venue->location
@@ -56,9 +117,105 @@ new class extends Component {
 
         $this->status = ucfirst($p->status ?? 'Terjadwal');
     }
+
+    public function chooseSchedule($id)
+    {
+        try {
+            app(ScheduleSelectionService::class)
+                ->choose($this->user, $id, $this->type);
+
+            $this->user->refresh();
+            $this->selectedScheduleId = $id;
+
+            // Dispatch ke listener
+            $this->dispatch('notify', 'success', 'Berhasil memilih jadwal!');
+
+        } catch (\Exception $e) {
+            $this->dispatch('notify', 'error', $e->getMessage());
+        }
+    }
+
+    public function cancelSchedule()
+    {
+        try {
+            app(ScheduleSelectionService::class)
+                ->cancel($this->user, $this->type);
+
+            $this->user->refresh();
+            $this->selectedScheduleId = null;
+
+            $this->dispatch('notify', 'success', 'Jadwal berhasil dibatalkan!');
+
+        } catch (\Exception $e) {
+            $this->dispatch('notify', 'error', $e->getMessage());
+        }
+    }
+
+    #[On('notify')]
+    public function showSweetAlert($type, $message)
+    {
+        $this->js("
+            Swal.fire({
+                toast: true,
+                icon: '{$type}',
+                title: '{$message}',
+                position: 'top-end',
+                timer: 3000,
+                showConfirmButton: false,
+                width: '500px'
+            });
+        ");
+    }
+
+    public function getSelectedScheduleProperty()
+    {
+        return $this->selectedScheduleId
+            ? PeriodSchedule::find($this->selectedScheduleId)
+            : null;
+    }
+
+    public function confirmChoose($id)
+    {
+        $this->js("
+            Swal.fire({
+                title: 'Daftar Jadwal?',
+                text: 'Apakah kamu yakin ingin mendaftar jadwal ini?',
+                icon: 'question',
+                showCancelButton: true,
+                confirmButtonColor: '#3085d6',
+                cancelButtonColor: '#d33',
+                confirmButtonText: 'Ya, daftar!'
+            }).then((result) => {
+                if (result.isConfirmed) {
+                    \$wire.chooseSchedule('{$id}');
+                } else {
+                    if(btn) btn.disabled = false;
+                }
+            });
+        ");
+    }
+
+    public function confirmCancel()
+    {
+        $this->js("
+            Swal.fire({
+                title: 'Batalkan Jadwal?',
+                text: 'Apakah kamu yakin ingin membatalkan jadwal ini?',
+                icon: 'warning',
+                showCancelButton: true,
+                confirmButtonColor: '#3085d6',
+                cancelButtonColor: '#d33',
+                confirmButtonText: 'Ya, batalkan!'
+            }).then((result) => {
+                if (result.isConfirmed) {
+                    \$wire.cancelSchedule();
+                }
+            });
+        ");
+    }
+
 };
 ?>
-
 <div class="pt-4 md:pt-8 mb-16 md:mb-20">
     <div class="flex flex-col items-center justify-center p-0 md:p-4">
 
@@ -66,35 +223,81 @@ new class extends Component {
             Jadwal Sidang {{ $type === 'final' ? 'Skripsi' : 'Proposal' }}
         </h1>
 
-        @if($presentation)
+        @if($selectedScheduleId && $this->selectedSchedule && now()->greaterThan(\Carbon\Carbon::parse($this->selectedSchedule->start_date)->subWeek()))
             <div class="w-full max-w-sm sm:max-w-lg bg-gray-100 p-6 md:p-10 rounded-lg shadow-xl relative">
-                <div class="text-center space-y-3 md:space-y-4">
-                    <p class="text-xl md:text-3xl font-semibold text-gray-800">
-                        {{ $tanggal }}
-                    </p>
-
-                    <p class="text-2xl md:text-4xl font-bold text-gray-900">
-                        Pk: {{ $jam }}
-                    </p>
-
-                    <p class="text-lg md:text-xl font-medium text-gray-700">
-                        {{ $lokasi }}
-                    </p>
-                </div>
-
-                <div class="mt-6 md:mt-8 pt-3 md:pt-4 border-t border-gray-300 text-center">
-                    <span class="block w-full py-2 text-lg md:text-xl text-white font-medium rounded-lg shadow-lg bg-green-600">
+                @if($lokasi && $tanggal && $jam)
+                    <div class="text-center space-y-3 md:space-y-4">
+                        <p class="text-xl md:text-3xl font-semibold text-gray-800">{{ $tanggal }}</p>
+                        <p class="text-2xl md:text-4xl font-bold text-gray-900">Pk: {{ $jam }}</p>
+                        <p class="text-lg md:text-xl font-medium text-gray-700">{{ $lokasi }}</p>
+                    </div>
+                @else
+                    <span class="block text-center w-full py-2 text-lg md:text-xl text-white font-medium rounded-lg shadow-lg bg-green-600">
                         {{ $status }}
                     </span>
-                </div>
+                @endif
             </div>
         @else
-            <div class="w-full max-w-sm sm:max-w-lg bg-gray-100 p-6 md:p-10 rounded-lg shadow-xl text-center">
-                <p class="text-xl md:text-2xl font-semibold text-gray-700">
-                    Belum dijadwalkan
-                </p>
+
+            <div class="grid grid-cols-2 md:grid-cols-3 gap-4 w-full max-w-4xl">
+
+                @foreach($schedules as $i => $s)
+                    @php
+                        $i++;
+                        $start = \Carbon\Carbon::parse($s['start_date'])->locale('id');
+                        $end = \Carbon\Carbon::parse($s['end_date'])->locale('id');
+                        $deadline = $start->copy()->subWeek()->locale('id');
+                        $now = now();
+                        $canAction = $now->lessThan($deadline);
+                    @endphp
+
+                    <div class="bg-gray-100 p-4 rounded-lg shadow">
+
+                        <h2 class="text-lg font-semibold text-gray-800 mb-2">
+                            Sidang Proposal {{ $i }}
+                        </h2>
+
+                        <p class="text-sm text-gray-700">Akhir Pendaftaran: {{ $deadline->translatedFormat('d F Y') }}</p>
+                        <p class="text-sm text-gray-700">Sidang Mulai: {{ $start->translatedFormat('d F Y') }}</p>
+                        <p class="text-sm text-gray-700 mb-4">Sidang Berakhir: {{ $end->translatedFormat('d F Y') }}</p>
+
+                        @if($canAction)
+                            @if($selectedScheduleId == $s['id'])
+                                <button
+                                    wire:click="confirmCancel"
+                                    class="w-full bg-red-600 text-white py-2 rounded">
+                                    Cancel
+                                </button>
+                            @else
+                                <button
+                                    id="btn-choose-{{ $s['id'] }}"
+                                    wire:click="confirmChoose('{{ $s['id'] }}')"
+                                    class="w-full bg-blue-600 text-white py-2 rounded">
+                                    Daftar
+                                </button>
+                            @endif
+                        @else
+                            <div class="text-center py-2 text-gray-500">Tidak tersedia</div>
+                        @endif
+                    </div>
+                @endforeach
+
             </div>
         @endif
 
     </div>
+
+    <script>
+    window.addEventListener('toast', e => {
+        Swal.fire({
+            toast: true,
+            icon: e.detail.type,
+            title: e.detail.message,
+            position: 'top-end',
+            timer: 3000,
+            showConfirmButton: false,
+        });
+    });
+    </script>
+
 </div>
