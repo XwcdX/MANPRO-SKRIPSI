@@ -83,6 +83,30 @@ class extends Component {
         );
     }
 
+    public function getLockedSlots(): array
+    {
+        if (!$this->selectedType) return [];
+
+        $presentations = \App\Models\ThesisPresentation::where('period_schedule_id', $this->selectedType)
+            ->whereHas('examiners', fn($q) => $q->where('lecturer_id', auth()->id()))
+            ->with('student')
+            ->get();
+
+        $locked = [];
+        foreach ($presentations as $p) {
+            $date = Carbon::parse($p->presentation_date)->format('Y-m-d');
+            $timeSlot = substr($p->start_time, 0, 5) . '-' . substr($p->end_time, 0, 5);
+            $key = $date . '_' . $timeSlot;
+            
+            if (!isset($locked[$key])) {
+                $locked[$key] = [];
+            }
+            $locked[$key][] = $p->student->name;
+        }
+        
+        return $locked;
+    }
+
 
 
     public function saveChanges(array $availability): void
@@ -106,6 +130,7 @@ class extends Component {
         return [
             'periods' => app(AvailabilityService::class)->getPeriodsWithSchedules(),
             'availableTypes' => $this->getAvailableTypes(),
+            'lockedSlots' => $this->getLockedSlots(),
         ];
     }
 
@@ -189,8 +214,10 @@ class extends Component {
 
             <div wire:key="schedule-{{ $selectedType }}" x-data="{ 
                 availability: @js($availability),
+                lockedSlots: @js($lockedSlots),
                 hasChanges: false,
                 toggleSlot(key) {
+                    if (this.lockedSlots[key]) return;
                     this.availability[key] = !this.availability[key];
                     this.hasChanges = true;
                 },
@@ -233,9 +260,10 @@ class extends Component {
                                                     @else
                                                         <div 
                                                             @click="toggleSlot('{{ $key }}')"
-                                                            :class="availability['{{ $key }}'] ? 'bg-green-500 hover:bg-green-600' : 'bg-red-500 hover:bg-red-600'"
-                                                            class="w-full h-12 rounded cursor-pointer"
-                                                            :title="availability['{{ $key }}'] ? 'Available' : 'Busy'">
+                                                            :class="lockedSlots['{{ $key }}'] ? 'bg-yellow-500' : (availability['{{ $key }}'] ? 'bg-green-500 hover:bg-green-600 cursor-pointer' : 'bg-red-500 hover:bg-red-600 cursor-pointer')"
+                                                            class="w-full h-12 rounded flex items-center justify-center text-xs text-white font-medium px-1"
+                                                            :title="lockedSlots['{{ $key }}'] ? 'Locked: ' + lockedSlots['{{ $key }}'].join(', ') : (availability['{{ $key }}'] ? 'Available' : 'Busy')">
+                                                            <span x-show="lockedSlots['{{ $key }}']" x-text="lockedSlots['{{ $key }}'] ? lockedSlots['{{ $key }}'].length + ' student(s)' : ''"></span>
                                                         </div>
                                                     @endif
                                                 </td>
@@ -257,6 +285,10 @@ class extends Component {
                         <div class="flex items-center gap-2">
                             <div class="w-6 h-6 bg-red-500 rounded"></div>
                             <span class="text-zinc-600 dark:text-zinc-400">Busy</span>
+                        </div>
+                        <div class="flex items-center gap-2">
+                            <div class="w-6 h-6 bg-yellow-500 rounded"></div>
+                            <span class="text-zinc-600 dark:text-zinc-400">Locked (Assigned)</span>
                         </div>
                     </div>
                     <flux:button x-show="hasChanges" @click="saveChanges()" variant="primary" class="cursor-pointer">Save Changes</flux:button>

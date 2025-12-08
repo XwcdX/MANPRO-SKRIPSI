@@ -53,6 +53,12 @@ Route::prefix('lecturer')->name('lecturer.')->middleware(['auth:lecturer', 'veri
     });
 
     Volt::route('schedules/availability', 'lecturer.schedules.availability')->name('schedules.availability');
+    Volt::route('schedules/my', 'lecturer.schedules.my-schedules')->name('schedules.my');
+    
+    Route::middleware('permission:administrate,lecturer')->group(function () {
+        Volt::route('schedules/all', 'lecturer.schedules.all-schedules')->name('schedules.all');
+        Volt::route('topics/all', 'lecturer.topics.all-topics')->name('topics.all');
+    });
 
     Volt::route('applications', 'lecturer.applications.index')->name('applications.index');
     Volt::route('students', 'lecturer.students.index')->name('students.index');

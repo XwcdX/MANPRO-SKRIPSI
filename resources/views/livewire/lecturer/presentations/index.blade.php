@@ -575,15 +575,16 @@ new #[Layout('components.layouts.lecturer')] class extends Component {
 
                 <div class="md:col-span-2">
                     <flux:select wire:model.live="lead_examiner_id" label="Lead Examiner (⭐)" required
-                        :disabled="!$time_slot">
+                        :disabled="!$time_slot || $existingPresentation">
                         <option value="">Select Lead Examiner</option>
                         @foreach ($availableLecturers as $lecturer)
                             <option value="{{ $lecturer['id'] }}">{{ $lecturer['name'] }}</option>
                         @endforeach
                     </flux:select>
-                    @if (empty($availableLecturers) && $time_slot)
-                        <p class="text-xs text-amber-600 dark:text-amber-400 mt-1">No available lecturers for this time
-                            slot</p>
+                    @if($existingPresentation)
+                        <p class="text-xs text-blue-600 dark:text-blue-400 mt-1">Using examiners from existing presentation</p>
+                    @elseif(empty($availableLecturers) && $time_slot)
+                        <p class="text-xs text-amber-600 dark:text-amber-400 mt-1">No available lecturers for this time slot</p>
                     @elseif(!$time_slot)
                         <p class="text-xs text-zinc-500 dark:text-zinc-400 mt-1">Select time slot first</p>
                     @endif
@@ -591,21 +592,16 @@ new #[Layout('components.layouts.lecturer')] class extends Component {
 
                 <div class="md:col-span-2">
                     <flux:label>Examiners</flux:label>
-                    <div
-                        class="mt-2 space-y-2 max-h-48 overflow-y-auto border border-zinc-300 dark:border-zinc-600 rounded-lg p-3">
+                    <div class="mt-2 space-y-2 max-h-48 overflow-y-auto border border-zinc-300 dark:border-zinc-600 rounded-lg p-3 {{ $existingPresentation ? 'bg-zinc-50 dark:bg-zinc-800/50' : '' }}">
                         @forelse ($availableLecturers as $lecturer)
                             @if ($lecturer['id'] !== $lead_examiner_id)
-                                <label
-                                    class="flex items-center gap-2 cursor-pointer hover:bg-zinc-50 dark:hover:bg-zinc-800 p-2 rounded">
-                                    <input type="checkbox" wire:model="examiner_ids" value="{{ $lecturer['id'] }}"
-                                        class="rounded cursor-pointer">
-                                    <span
-                                        class="text-sm text-zinc-700 dark:text-zinc-300">{{ $lecturer['name'] }}</span>
+                                <label class="flex items-center gap-2 {{ $existingPresentation ? 'cursor-not-allowed opacity-60' : 'cursor-pointer hover:bg-zinc-50 dark:hover:bg-zinc-800' }} p-2 rounded">
+                                    <input type="checkbox" wire:model="examiner_ids" value="{{ $lecturer['id'] }}" class="rounded" {{ $existingPresentation ? 'disabled' : 'cursor-pointer' }}>
+                                    <span class="text-sm text-zinc-700 dark:text-zinc-300">{{ $lecturer['name'] }}</span>
                                 </label>
                             @endif
                         @empty
-                            <p class="text-sm text-zinc-500 dark:text-zinc-400">No available lecturers. Select time
-                                slot first.</p>
+                            <p class="text-sm text-zinc-500 dark:text-zinc-400">No available lecturers. Select time slot first.</p>
                         @endforelse
                     </div>
                 </div>

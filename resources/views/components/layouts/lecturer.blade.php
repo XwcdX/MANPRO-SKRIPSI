@@ -35,7 +35,10 @@
 
             <flux:navlist.group :heading="__('Schedules')" class="grid">
                 <flux:navlist.item icon="calendar" :href="route('lecturer.schedules.availability')"
-                    :current="request()->routeIs('lecturer.schedules.*')" wire:navigate>{{ __('My Availability') }}
+                    :current="request()->routeIs('lecturer.schedules.availability')" wire:navigate>{{ __('My Availability') }}
+                </flux:navlist.item>
+                <flux:navlist.item icon="clipboard-document-list" :href="route('lecturer.schedules.my')"
+                    :current="request()->routeIs('lecturer.schedules.my')" wire:navigate>{{ __('My Schedules') }}
                 </flux:navlist.item>
             </flux:navlist.group>
 
@@ -75,6 +78,12 @@
                     </flux:navlist.item>
                     <flux:navlist.item icon="presentation-chart-bar" :href="route('lecturer.presentations.index')"
                         :current="request()->routeIs('lecturer.presentations.*')" wire:navigate>{{ __('Presentations') }}
+                    </flux:navlist.item>
+                    <flux:navlist.item icon="clipboard-document-list" :href="route('lecturer.schedules.all')"
+                        :current="request()->routeIs('lecturer.schedules.all')" wire:navigate>{{ __('All Schedules') }}
+                    </flux:navlist.item>
+                    <flux:navlist.item icon="light-bulb" :href="route('lecturer.topics.all')"
+                        :current="request()->routeIs('lecturer.topics.all')" wire:navigate>{{ __('All Topics') }}
                     </flux:navlist.item>
                 </flux:navlist.group>
 
