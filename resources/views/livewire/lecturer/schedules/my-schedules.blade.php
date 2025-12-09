@@ -32,11 +32,20 @@ class extends Component {
         
         if ($this->decision === 'pass') {
             $newStatus = 4;
+            $student->update(['status' => $newStatus]);
         } else {
             $newStatus = 2;
+            $scheduleType = $presentation->periodSchedule->type;
+            $updateData = ['status' => $newStatus];
+            
+            if ($scheduleType === 'proposal_hearing') {
+                $updateData['proposal_schedule_id'] = null;
+            } else {
+                $updateData['thesis_schedule_id'] = null;
+            }
+            
+            $student->update($updateData);
         }
-
-        $student->update(['status' => $newStatus]);
 
         StudentStatusHistory::create([
             'student_id' => $student->id,
