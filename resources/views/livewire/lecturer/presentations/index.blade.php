@@ -8,7 +8,6 @@ use App\Models\Period;
 use App\Models\PeriodSchedule;
 use App\Models\Student;
 use App\Models\PresentationVenue;
-use App\Models\Lecturer;
 use App\Services\PresentationService;
 use App\Services\AvailabilityService;
 use Carbon\Carbon;
@@ -58,7 +57,6 @@ new #[Layout('components.layouts.lecturer')] class extends Component {
         $this->resetPage();
     }
 
-
     public ?array $existingPresentation = null;
 
     public function updatedPeriodId(): void
@@ -68,7 +66,7 @@ new #[Layout('components.layouts.lecturer')] class extends Component {
 
     public function updatedPeriodScheduleId(): void
     {
-        $this->reset('presentation_date', 'time_slot', 'lead_examiner_id', 'examiner_ids', 'availableLecturers');
+        $this->reset('student_ids', 'presentation_date', 'time_slot', 'lead_examiner_id', 'examiner_ids', 'availableLecturers');
     }
 
     public function updatedPresentationDate(): void
@@ -102,12 +100,7 @@ new #[Layout('components.layouts.lecturer')] class extends Component {
         }
 
         [$startTime, $endTime] = explode('-', $this->time_slot);
-        $existing = $this->presentationService->findExistingPresentation(
-            $this->venue_id,
-            $this->presentation_date,
-            $startTime,
-            $endTime
-        );
+        $existing = $this->presentationService->findExistingPresentation($this->venue_id, $this->presentation_date, $startTime, $endTime);
 
         if ($existing) {
             $this->existingPresentation = [
@@ -128,14 +121,7 @@ new #[Layout('components.layouts.lecturer')] class extends Component {
             $excludeId = $this->editing && $this->editing->exists ? $this->editing->id : null;
             [$startTime, $endTime] = explode('-', $this->time_slot);
 
-            $this->availableLecturers = $this->presentationService->getAvailableLecturers(
-                $this->period_schedule_id,
-                $this->presentation_date,
-                $startTime,
-                $endTime,
-                $this->student_ids,
-                $excludeId
-            );
+            $this->availableLecturers = $this->presentationService->getAvailableLecturers($this->period_schedule_id, $this->presentation_date, $startTime, $endTime, $this->student_ids, $excludeId);
         } else {
             $this->availableLecturers = [];
         }
@@ -158,9 +144,7 @@ new #[Layout('components.layouts.lecturer')] class extends Component {
         }
 
         if ($this->filterType) {
-            $query->whereHas('periodSchedule', function ($q) {
-                $q->where('type', $this->filterType === 'proposal' ? 'proposal_hearing' : 'thesis_defense');
-            });
+            $query->where('period_schedule_id', $this->filterType);
         }
 
         $scheduledStudentIds = ThesisPresentation::when($this->editing && $this->editing->exists, function ($q) {
@@ -188,14 +172,19 @@ new #[Layout('components.layouts.lecturer')] class extends Component {
 
     private function getAvailableStudents(array $scheduledStudentIds): array
     {
-        if (!$this->period_id) {
+        if (!$this->period_id || !$this->period_schedule_id) {
             return [];
         }
 
+        $schedule = PeriodSchedule::find($this->period_schedule_id);
+        if (!$schedule) {
+            return [];
+        }
+
+        $column = $schedule->type === 'proposal_hearing' ? 'proposal_schedule_id' : 'thesis_schedule_id';
+
         return Student::where('status', 3)
-            ->whereHas('periods', function ($q) {
-                $q->where('periods.id', $this->period_id);
-            })
+            ->where($column, $this->period_schedule_id)
             ->when(!empty($scheduledStudentIds), function ($q) use ($scheduledStudentIds) {
                 $q->whereNotIn('id', $scheduledStudentIds);
             })
@@ -310,6 +299,14 @@ new #[Layout('components.layouts.lecturer')] class extends Component {
 
     public function confirmDelete(string $id): void
     {
+        $presentation = ThesisPresentation::find($id);
+        if ($presentation) {
+            $presentationDateTime = Carbon::parse($presentation->presentation_date)->setTimeFromTimeString($presentation->end_time);
+            if ($presentationDateTime->isPast()) {
+                session()->flash('error', 'Cannot delete past presentations.');
+                return;
+            }
+        }
         $this->deletingId = $id;
         $this->showDeleteModal = true;
     }
@@ -397,12 +394,37 @@ new #[Layout('components.layouts.lecturer')] class extends Component {
                     @endforeach
                 </select>
 
-                <select wire:model.live="filterType"
-                    class="px-4 py-2 rounded-lg border border-zinc-300 dark:border-zinc-600 bg-white dark:bg-zinc-800 text-black dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500">
-                    <option value="">All Types</option>
-                    <option value="proposal">Proposal</option>
-                    <option value="thesis">Thesis</option>
-                </select>
+                @if ($filterPeriod)
+                    <select wire:model.live="filterType"
+                        class="px-4 py-2 rounded-lg border border-zinc-300 dark:border-zinc-600 bg-white dark:bg-zinc-800 text-black dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500">
+                        <option value="">All Types</option>
+                        @php
+                            $period = \App\Models\Period::find($filterPeriod);
+                            if ($period) {
+                                $proposalSchedules = $period
+                                    ->schedules()
+                                    ->where('type', 'proposal_hearing')
+                                    ->orderBy('start_date')
+                                    ->get();
+                                $thesisSchedules = $period
+                                    ->schedules()
+                                    ->where('type', 'thesis_defense')
+                                    ->orderBy('start_date')
+                                    ->get();
+                            }
+                        @endphp
+                        @if (isset($proposalSchedules))
+                            @foreach ($proposalSchedules as $index => $schedule)
+                                <option value="{{ $schedule->id }}">Proposal Hearing {{ $index + 1 }}</option>
+                            @endforeach
+                        @endif
+                        @if (isset($thesisSchedules))
+                            @foreach ($thesisSchedules as $index => $schedule)
+                                <option value="{{ $schedule->id }}">Thesis Defense {{ $index + 1 }}</option>
+                            @endforeach
+                        @endif
+                    </select>
+                @endif
             </div>
 
             <hr class="border-t border-zinc-200 dark:border-zinc-700 mb-6">
@@ -518,39 +540,6 @@ new #[Layout('components.layouts.lecturer')] class extends Component {
                 </flux:select>
 
                 <div class="md:col-span-2">
-                    @if($existingPresentation)
-                        <div class="mb-4 p-3 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg">
-                            <p class="text-sm text-blue-800 dark:text-blue-200">
-                                <strong>📍 Existing presentation found:</strong><br>
-                                {{ $existingPresentation['venue'] }} • {{ $existingPresentation['date'] }} • {{ $existingPresentation['time'] }}<br>
-                                <span class="text-xs">Examiners have been auto-filled. Select students to join this session.</span>
-                            </p>
-                        </div>
-                    @endif
-
-                    <div x-data="{ open: false, search: '' }" @click.away="open = false" class="relative">
-                        <flux:label>Students ({{ count($student_ids) }} selected)</flux:label>
-                        <input type="text" x-model="search" @focus="open = true" @click="open = true" 
-                            placeholder="Search students..." 
-                            class="mt-1 block w-full rounded-lg border border-zinc-300 dark:border-zinc-600 bg-white dark:bg-zinc-800 text-black dark:text-white px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" 
-                            {{ !$period_id ? 'disabled' : '' }}>
-                        <div x-show="open" x-transition class="absolute z-50 w-full mt-1 max-h-60 overflow-y-auto border border-zinc-300 dark:border-zinc-600 rounded-lg bg-white dark:bg-zinc-800 shadow-lg">
-                            <div class="p-2 space-y-1">
-                                @forelse($students as $student)
-                                    <label x-show="'{{ strtolower($student['name']) }}'.includes(search.toLowerCase())" 
-                                        class="flex items-center gap-2 cursor-pointer hover:bg-zinc-50 dark:hover:bg-zinc-700 p-2 rounded">
-                                        <input type="checkbox" wire:model.live="student_ids" value="{{ $student['id'] }}" class="rounded cursor-pointer">
-                                        <span class="text-sm text-zinc-700 dark:text-zinc-300">{{ $student['name'] }}</span>
-                                    </label>
-                                @empty
-                                    <p class="text-sm text-zinc-500 dark:text-zinc-400 p-2">No students available</p>
-                                @endforelse
-                            </div>
-                        </div>
-                    </div>
-                </div>
-
-                <div class="md:col-span-2">
                     <flux:select wire:model.live="period_schedule_id" label="Type" required :disabled="!$period_id">
                         <option value="">Select Type</option>
                         @foreach ($periodSchedules as $schedule)
@@ -559,19 +548,57 @@ new #[Layout('components.layouts.lecturer')] class extends Component {
                     </flux:select>
                 </div>
 
+                @if ($period_schedule_id)
+                    <div class="md:col-span-2">
+                        @if ($existingPresentation)
+                            <div
+                                class="mb-4 p-3 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg">
+                                <p class="text-sm text-blue-800 dark:text-blue-200">
+                                    <strong>📍 Existing presentation found:</strong><br>
+                                    {{ $existingPresentation['venue'] }} • {{ $existingPresentation['date'] }} •
+                                    {{ $existingPresentation['time'] }}<br>
+                                    <span class="text-xs">Examiners have been auto-filled. Select students to join this
+                                        session.</span>
+                                </p>
+                            </div>
+                        @endif
+
+                        <div x-data="{ open: false, search: '' }" @click.away="open = false" class="relative">
+                            <flux:label>Students ({{ count($student_ids) }} selected)</flux:label>
+                            <input type="text" x-model="search" @focus="open = true" @click="open = true"
+                                placeholder="Search students..."
+                                class="mt-1 block w-full h-10 rounded-lg border border-zinc-300 dark:border-zinc-600 bg-white dark:bg-zinc-800 text-black dark:text-white px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+                            <div x-show="open" x-transition
+                                class="absolute z-50 w-full mt-1 max-h-60 overflow-y-auto border border-zinc-300 dark:border-zinc-600 rounded-lg bg-white dark:bg-zinc-800 shadow-lg">
+                                <div class="p-2 space-y-1">
+                                    @forelse($students as $student)
+                                        <label
+                                            x-show="'{{ strtolower($student['name']) }}'.includes(search.toLowerCase())"
+                                            class="flex items-center gap-2 cursor-pointer hover:bg-zinc-50 dark:hover:bg-zinc-700 p-2 rounded">
+                                            <input type="checkbox" wire:model.live="student_ids"
+                                                value="{{ $student['id'] }}" class="rounded cursor-pointer">
+                                            <span
+                                                class="text-sm text-zinc-700 dark:text-zinc-300">{{ $student['name'] }}</span>
+                                        </label>
+                                    @empty
+                                        <p class="text-sm text-zinc-500 dark:text-zinc-400 p-2">No students available
+                                        </p>
+                                    @endforelse
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                @endif
+
                 <flux:input wire:model.live="presentation_date" type="date" label="Presentation Date" required
                     :disabled="!$period_schedule_id" min="{{ $minDate }}" max="{{ $maxDate }}" />
 
-                <div>
-                    <flux:label>Time Slot</flux:label>
-                    <select wire:model.live="time_slot" required @disabled(!$presentation_date)
-                        class="mt-1 block w-full rounded-lg border border-zinc-300 dark:border-zinc-600 bg-white dark:bg-zinc-800 text-black dark:text-white px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
-                        <option value="">Select Time Slot</option>
-                        @foreach ($timeSlots as $slot)
-                            <option value="{{ $slot }}">{{ $slot }}</option>
-                        @endforeach
-                    </select>
-                </div>
+                <flux:select wire:model.live="time_slot" label="Time Slot" required :disabled="!$presentation_date">
+                    <option value="">Select Time Slot</option>
+                    @foreach ($timeSlots as $slot)
+                        <option value="{{ $slot }}">{{ $slot }}</option>
+                    @endforeach
+                </flux:select>
 
                 <div class="md:col-span-2">
                     <flux:select wire:model.live="lead_examiner_id" label="Lead Examiner (⭐)" required
@@ -581,10 +608,12 @@ new #[Layout('components.layouts.lecturer')] class extends Component {
                             <option value="{{ $lecturer['id'] }}">{{ $lecturer['name'] }}</option>
                         @endforeach
                     </flux:select>
-                    @if($existingPresentation)
-                        <p class="text-xs text-blue-600 dark:text-blue-400 mt-1">Using examiners from existing presentation</p>
+                    @if ($existingPresentation)
+                        <p class="text-xs text-blue-600 dark:text-blue-400 mt-1">Using examiners from existing
+                            presentation</p>
                     @elseif(empty($availableLecturers) && $time_slot)
-                        <p class="text-xs text-amber-600 dark:text-amber-400 mt-1">No available lecturers for this time slot</p>
+                        <p class="text-xs text-amber-600 dark:text-amber-400 mt-1">No available lecturers for this time
+                            slot</p>
                     @elseif(!$time_slot)
                         <p class="text-xs text-zinc-500 dark:text-zinc-400 mt-1">Select time slot first</p>
                     @endif
@@ -592,16 +621,21 @@ new #[Layout('components.layouts.lecturer')] class extends Component {
 
                 <div class="md:col-span-2">
                     <flux:label>Examiners</flux:label>
-                    <div class="mt-2 space-y-2 max-h-48 overflow-y-auto border border-zinc-300 dark:border-zinc-600 rounded-lg p-3 {{ $existingPresentation ? 'bg-zinc-50 dark:bg-zinc-800/50' : '' }}">
+                    <div
+                        class="mt-2 space-y-2 max-h-48 overflow-y-auto border border-zinc-300 dark:border-zinc-600 rounded-lg p-3 {{ $existingPresentation ? 'bg-zinc-50 dark:bg-zinc-800/50' : '' }}">
                         @forelse ($availableLecturers as $lecturer)
                             @if ($lecturer['id'] !== $lead_examiner_id)
-                                <label class="flex items-center gap-2 {{ $existingPresentation ? 'cursor-not-allowed opacity-60' : 'cursor-pointer hover:bg-zinc-50 dark:hover:bg-zinc-800' }} p-2 rounded">
-                                    <input type="checkbox" wire:model="examiner_ids" value="{{ $lecturer['id'] }}" class="rounded" {{ $existingPresentation ? 'disabled' : 'cursor-pointer' }}>
-                                    <span class="text-sm text-zinc-700 dark:text-zinc-300">{{ $lecturer['name'] }}</span>
+                                <label
+                                    class="flex items-center gap-2 {{ $existingPresentation ? 'cursor-not-allowed opacity-60' : 'cursor-pointer hover:bg-zinc-50 dark:hover:bg-zinc-800' }} p-2 rounded">
+                                    <input type="checkbox" wire:model="examiner_ids" value="{{ $lecturer['id'] }}"
+                                        class="rounded" {{ $existingPresentation ? 'disabled' : 'cursor-pointer' }}>
+                                    <span
+                                        class="text-sm text-zinc-700 dark:text-zinc-300">{{ $lecturer['name'] }}</span>
                                 </label>
                             @endif
                         @empty
-                            <p class="text-sm text-zinc-500 dark:text-zinc-400">No available lecturers. Select time slot first.</p>
+                            <p class="text-sm text-zinc-500 dark:text-zinc-400">No available lecturers. Select time
+                                slot first.</p>
                         @endforelse
                     </div>
                 </div>
