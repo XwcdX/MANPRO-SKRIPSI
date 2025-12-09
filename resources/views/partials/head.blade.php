@@ -19,6 +19,4 @@
     .font-playfair { font-family: 'Playfair Display', serif; }
     body { font-family: 'Poppins', sans-serif; }
 </style>
-
-@vite(['resources/css/app.css', 'resources/js/app.js'])
 @fluxAppearance

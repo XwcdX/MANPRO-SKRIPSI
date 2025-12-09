@@ -39,12 +39,12 @@ new class extends Component {
         foreach ($this->user->supervisors as $lecturer) {
             if ($lecturer->pivot->role == 0) {
                 $this->dosbing1 = $lecturer->id;
-                $this->status1 = 'active';
+                $this->status1 = 'accepted';
             }
 
             if ($lecturer->pivot->role == 1) {
                 $this->dosbing2 = $lecturer->id;
-                $this->status2 = 'active';
+                $this->status2 = 'accepted';
             }
         }
 

@@ -34,6 +34,7 @@ class Student extends Authenticatable implements MustVerifyEmail
         'final_schedule_id',
         'due_date',
         'is_active',
+        'email_verified_at',
     ];
 
     protected $hidden = [
