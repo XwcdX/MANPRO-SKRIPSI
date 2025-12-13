@@ -15,12 +15,25 @@ class FixFluxUrl
         if ($response->headers->get('content-type') === 'text/html; charset=UTF-8') {
             $content = $response->getContent();
 
-            $correctUrl = 'https://pce.petra.ac.id/flux/flux.js';
-            $correctCss = 'https://pce.petra.ac.id/flux/flux.css';
+            $baseUrl = env('APP_URL');
 
-            $content = str_replace('src="/flux/flux.js', 'src="' . $correctUrl, $content);
-            $content = str_replace('href="/flux/flux.css', 'href="' . $correctCss, $content);
+            $content = str_replace(
+                'src="/flux/flux.js',
+                'src="' . $baseUrl . '/flux/flux.js',
+                $content
+            );
 
+            $content = str_replace(
+                'src="/flux/flux.min.js',
+                'src="' . $baseUrl . '/flux/flux.min.js',
+                $content
+            );
+
+            $content = str_replace(
+                'href="/flux/flux.css',
+                'href="' . $baseUrl . '/flux/flux.css',
+                $content
+            );
             $response->setContent($content);
         }
 
