@@ -91,6 +91,7 @@ class PeriodService
                     'type' => 'proposal_hearing',
                     'start_date' => $schedule['start_date'],
                     'end_date' => $schedule['end_date'],
+                    'deadline' => $schedule['deadline'],
                 ]);
             }
         }
@@ -102,6 +103,7 @@ class PeriodService
                     'type' => 'thesis_defense',
                     'start_date' => $schedule['start_date'],
                     'end_date' => $schedule['end_date'],
+                    'deadline' => $schedule['deadline'],
                 ]);
             }
         }

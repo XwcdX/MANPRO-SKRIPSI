@@ -17,6 +17,7 @@ return new class extends Migration
             $table->enum('type', ['proposal_hearing', 'thesis_defense'])->comment('Type of schedule: proposal hearing or thesis defense');
             $table->date('start_date')->comment('Start date of this schedule session');
             $table->date('end_date')->comment('End date of this schedule session');
+            $table->date('deadline')->comment('Deadline for submission');
             $table->timestamps();
 
             $table->index('period_id');

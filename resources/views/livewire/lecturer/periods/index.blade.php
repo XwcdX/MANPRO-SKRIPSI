@@ -4,7 +4,6 @@ use function Livewire\Volt\{state, layout, rules, with, uses};
 use Livewire\WithPagination;
 use App\Models\Period;
 use App\Services\PeriodService;
-use Illuminate\Validation\Rule;
 use Carbon\Carbon;
 
 layout('components.layouts.lecturer');
@@ -19,10 +18,10 @@ state([
     'end_date' => '',
     'proposal_schedules' => [],
     'thesis_schedules' => [],
-    'proposal_schedule_start_time' => '07:30',
+    'proposal_schedule_start_time' => '08:00',
     'proposal_schedule_end_time' => '18:00',
     'proposal_slot_duration' => 45,
-    'thesis_schedule_start_time' => '07:30',
+    'thesis_schedule_start_time' => '08:00',
     'thesis_schedule_end_time' => '18:00',
     'thesis_slot_duration' => 45,
     'break_start_time' => '12:00',
@@ -30,6 +29,8 @@ state([
     'default_quota' => 12,
     'showArchiveConfirmModal' => false,
     'archivingPeriodId' => null,
+    'showDeleteConfirmModal' => false,
+    'deletingPeriodId' => null,
     'serverToday' => fn() => now()->format('Y-m-d'),
 ]);
 
@@ -39,8 +40,10 @@ rules(
         'end_date' => 'required|date|after:start_date',
         'proposal_schedules.*.start_date' => 'required|date|after_or_equal:start_date|before_or_equal:end_date',
         'proposal_schedules.*.end_date' => 'required|date|after:proposal_schedules.*.start_date|before_or_equal:end_date',
+        'proposal_schedules.*.deadline' => 'required|date|before_or_equal:proposal_schedules.*.start_date',
         'thesis_schedules.*.start_date' => 'required|date|after_or_equal:start_date|before_or_equal:end_date',
         'thesis_schedules.*.end_date' => 'required|date|after:thesis_schedules.*.start_date|before_or_equal:end_date',
+        'thesis_schedules.*.deadline' => 'required|date|before_or_equal:thesis_schedules.*.start_date',
         'proposal_schedule_start_time' => 'required|date_format:H:i',
         'proposal_schedule_end_time' => 'required|date_format:H:i|after:proposal_schedule_start_time',
         'proposal_slot_duration' => 'required|integer|min:15|max:120',
@@ -54,7 +57,6 @@ rules(
 );
 
 $validateScheduleCollision = function () {
-    // Check for collisions in proposal schedules
     foreach ($this->proposal_schedules as $index => $schedule) {
         if (!empty($schedule['start_date']) && !empty($schedule['end_date'])) {
             if ($this->checkDateCollision($schedule['start_date'], $schedule['end_date'], $index, 'proposal')) {
@@ -63,7 +65,6 @@ $validateScheduleCollision = function () {
         }
     }
     
-    // Check for collisions in thesis schedules
     foreach ($this->thesis_schedules as $index => $schedule) {
         if (!empty($schedule['start_date']) && !empty($schedule['end_date'])) {
             if ($this->checkDateCollision($schedule['start_date'], $schedule['end_date'], $index, 'thesis')) {
@@ -104,10 +105,10 @@ $create = function () {
     $this->reset();
     $this->editing = new Period();
     $this->default_quota = 12;
-    $this->proposal_schedule_start_time = '07:30';
+    $this->proposal_schedule_start_time = '08:00';
     $this->proposal_schedule_end_time = '18:00';
     $this->proposal_slot_duration = 45;
-    $this->thesis_schedule_start_time = '07:30';
+    $this->thesis_schedule_start_time = '08:00';
     $this->thesis_schedule_end_time = '18:00';
     $this->thesis_slot_duration = 45;
     $this->break_start_time = '12:00';
@@ -125,25 +126,28 @@ $edit = function (Period $period) {
     $this->start_date = Carbon::parse($period->start_date)->format('Y-m-d');
     $this->end_date = Carbon::parse($period->end_date)->format('Y-m-d');
     
-    // Load existing schedules
     $this->proposal_schedules = $period->schedules()->where('type', 'proposal_hearing')->get()->map(function($schedule) {
         return [
+            'id' => $schedule->id,
             'start_date' => Carbon::parse($schedule->start_date)->format('Y-m-d'),
             'end_date' => Carbon::parse($schedule->end_date)->format('Y-m-d'),
+            'deadline' => Carbon::parse($schedule->deadline)->format('Y-m-d'),
         ];
     })->toArray();
     
     $this->thesis_schedules = $period->schedules()->where('type', 'thesis_defense')->get()->map(function($schedule) {
         return [
+            'id' => $schedule->id,
             'start_date' => Carbon::parse($schedule->start_date)->format('Y-m-d'),
             'end_date' => Carbon::parse($schedule->end_date)->format('Y-m-d'),
+            'deadline' => Carbon::parse($schedule->deadline)->format('Y-m-d'),
         ];
     })->toArray();
     
-    $this->proposal_schedule_start_time = $period->proposal_schedule_start_time ? substr($period->proposal_schedule_start_time, 0, 5) : '07:30';
+    $this->proposal_schedule_start_time = $period->proposal_schedule_start_time ? substr($period->proposal_schedule_start_time, 0, 5) : '08';
     $this->proposal_schedule_end_time = $period->proposal_schedule_end_time ? substr($period->proposal_schedule_end_time, 0, 5) : '18:00';
     $this->proposal_slot_duration = $period->proposal_slot_duration ?? 45;
-    $this->thesis_schedule_start_time = $period->thesis_schedule_start_time ? substr($period->thesis_schedule_start_time, 0, 5) : '07:30';
+    $this->thesis_schedule_start_time = $period->thesis_schedule_start_time ? substr($period->thesis_schedule_start_time, 0, 5) : '08';
     $this->thesis_schedule_end_time = $period->thesis_schedule_end_time ? substr($period->thesis_schedule_end_time, 0, 5) : '18:00';
     $this->thesis_slot_duration = $period->thesis_slot_duration ?? 45;
     $this->break_start_time = $period->break_start_time ? substr($period->break_start_time, 0, 5) : '12:00';
@@ -189,13 +193,22 @@ $save = function (PeriodService $service) {
     }
 };
 
-$deletePeriod = function (Period $period, PeriodService $service) {
-    $service->deletePeriod($period->id);
-    session()->flash('success', 'Period deleted successfully.');
+$confirmDelete = function ($periodId) {
+    $this->deletingPeriodId = $periodId;
+    $this->showDeleteConfirmModal = true;
+};
+
+$deletePeriod = function (PeriodService $service) {
+    if ($this->deletingPeriodId) {
+        $service->deletePeriod($this->deletingPeriodId);
+        session()->flash('success', 'Period deleted successfully.');
+    }
+    $this->showDeleteConfirmModal = false;
+    $this->resetPage();
 };
 
 $addProposalSchedule = function () {
-    $this->proposal_schedules[] = ['start_date' => '', 'end_date' => ''];
+    $this->proposal_schedules[] = ['start_date' => '', 'end_date' => '', 'deadline' => ''];
 };
 
 $removeProposalSchedule = function ($index) {
@@ -204,7 +217,7 @@ $removeProposalSchedule = function ($index) {
 };
 
 $addThesisSchedule = function () {
-    $this->thesis_schedules[] = ['start_date' => '', 'end_date' => ''];
+    $this->thesis_schedules[] = ['start_date' => '', 'end_date' => '', 'deadline' => ''];
 };
 
 $removeThesisSchedule = function ($index) {
@@ -212,7 +225,6 @@ $removeThesisSchedule = function ($index) {
     $this->thesis_schedules = array_values($this->thesis_schedules);
 };
 
-// Computed properties for form state
 $getCanFillOtherFields = function () {
     if (empty($this->start_date) || empty($this->end_date)) {
         return false;
@@ -223,7 +235,6 @@ $getCanFillOtherFields = function () {
 $getUsedDateRanges = function () {
     $ranges = [];
     
-    // Add proposal schedule ranges
     foreach ($this->proposal_schedules as $schedule) {
         if (!empty($schedule['start_date']) && !empty($schedule['end_date'])) {
             $ranges[] = [
@@ -234,7 +245,6 @@ $getUsedDateRanges = function () {
         }
     }
     
-    // Add thesis schedule ranges
     foreach ($this->thesis_schedules as $schedule) {
         if (!empty($schedule['start_date']) && !empty($schedule['end_date'])) {
             $ranges[] = [
@@ -256,7 +266,6 @@ $checkDateCollision = function ($startDate, $endDate, $excludeIndex = null, $exc
     $ranges = $this->getUsedDateRanges();
     
     foreach ($ranges as $index => $range) {
-        // Skip if this is the range we're currently editing
         if ($excludeIndex !== null && $excludeType !== null) {
             $currentSchedules = $excludeType === 'proposal' ? $this->proposal_schedules : $this->thesis_schedules;
             if (isset($currentSchedules[$excludeIndex])) {
@@ -267,7 +276,6 @@ $checkDateCollision = function ($startDate, $endDate, $excludeIndex = null, $exc
             }
         }
         
-        // Check for overlap
         if (($startDate >= $range['start'] && $startDate <= $range['end']) ||
             ($endDate >= $range['start'] && $endDate <= $range['end']) ||
             ($startDate <= $range['start'] && $endDate >= $range['end'])) {
@@ -281,7 +289,6 @@ $checkDateCollision = function ($startDate, $endDate, $excludeIndex = null, $exc
 ?>
 
 <div>
-    {{-- This is the main page content --}}
     <section class="w-full">
         <div
             class="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-700 rounded-lg shadow-xl mb-10 p-6 sm:p-8">
@@ -378,8 +385,7 @@ $checkDateCollision = function ($startDate, $endDate, $excludeIndex = null, $exc
                                                 variant="outline" size="sm" class="cursor-pointer">Manage Quotas
                                             </flux:button>
 
-                                            <flux:button wire:click="deletePeriod('{{ $period->id }}')"
-                                                wire:confirm="Are you sure you want to permanently delete this period and all its data?"
+                                            <flux:button wire:click="confirmDelete('{{ $period->id }}')"
                                                 variant="danger" size="sm" class="cursor-pointer">Delete
                                             </flux:button>
                                         @endif
@@ -450,13 +456,19 @@ $checkDateCollision = function ($startDate, $endDate, $excludeIndex = null, $exc
                         @else
                             @foreach($proposal_schedules as $index => $schedule)
                                 @php
-                                    $isPast = !empty($schedule['end_date']) && $schedule['end_date'] < $this->serverToday;
+                                    $isOngoingOrPast = !empty($schedule['start_date']) && $schedule['start_date'] <= now()->format('Y-m-d');
                                     $isLast = $index === count($proposal_schedules) - 1;
                                 @endphp
-                                <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-3 p-3 border border-zinc-200 dark:border-zinc-600 rounded-lg {{ $isPast ? 'bg-zinc-50 dark:bg-zinc-800/50' : '' }}">
+                                <div class="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-3 p-3 border border-zinc-200 dark:border-zinc-600 rounded-lg {{ $isOngoingOrPast ? 'bg-zinc-50 dark:bg-zinc-800/50' : '' }}">
                                     @if($isLast)
-                                        <flux:input wire:model.live="proposal_schedules.{{ $index }}.start_date" type="date" label="Start Date" 
+                                        <flux:input wire:model.live="proposal_schedules.{{ $index }}.deadline" type="date" label="Deadline" 
                                             min="{{ $start_date }}" max="{{ $end_date }}" />
+                                        @if(empty($schedule['deadline']))
+                                            <flux:input type="date" label="Start Date" disabled />
+                                        @else
+                                            <flux:input wire:model.live="proposal_schedules.{{ $index }}.start_date" type="date" label="Start Date" 
+                                                min="{{ $schedule['deadline'] }}" max="{{ $end_date }}" />
+                                        @endif
                                         @if(empty($schedule['start_date']))
                                             <flux:input type="date" label="End Date" disabled />
                                         @else
@@ -464,18 +476,17 @@ $checkDateCollision = function ($startDate, $endDate, $excludeIndex = null, $exc
                                                 min="{{ $schedule['start_date'] }}" max="{{ $end_date }}" />
                                         @endif
                                     @else
-                                        <flux:input wire:model="proposal_schedules.{{ $index }}.start_date" type="date" label="Start Date" 
-                                            min="{{ $start_date }}" max="{{ $end_date }}" disabled />
-                                        <flux:input wire:model="proposal_schedules.{{ $index }}.end_date" type="date" label="End Date" 
-                                            min="{{ $start_date }}" max="{{ $end_date }}" disabled />
+                                        <flux:input wire:model="proposal_schedules.{{ $index }}.deadline" type="date" label="Deadline" disabled />
+                                        <flux:input wire:model="proposal_schedules.{{ $index }}.start_date" type="date" label="Start Date" disabled />
+                                        <flux:input wire:model="proposal_schedules.{{ $index }}.end_date" type="date" label="End Date" disabled />
                                     @endif
-                                    <div class="col-span-1 sm:col-span-2 flex justify-end">
-                                        @if(!$isPast)
+                                    <div class="col-span-1 sm:col-span-3 flex justify-end">
+                                        @if(!$isOngoingOrPast)
                                             <flux:button type="button" wire:click="removeProposalSchedule({{ $index }})" variant="danger" size="sm" class="cursor-pointer">
                                                 Remove
                                             </flux:button>
                                         @else
-                                            <span class="text-xs text-zinc-500 italic">Completed - Cannot be removed</span>
+                                            <span class="text-xs text-zinc-500 italic">Ongoing/Completed - Cannot be removed</span>
                                         @endif
                                     </div>
                                 </div>
@@ -506,13 +517,19 @@ $checkDateCollision = function ($startDate, $endDate, $excludeIndex = null, $exc
                         @else
                             @foreach($thesis_schedules as $index => $schedule)
                                 @php
-                                    $isPast = !empty($schedule['end_date']) && $schedule['end_date'] < $this->serverToday;
+                                    $isOngoingOrPast = !empty($schedule['start_date']) && $schedule['start_date'] <= now()->format('Y-m-d');
                                     $isLast = $index === count($thesis_schedules) - 1;
                                 @endphp
-                                <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-3 p-3 border border-zinc-200 dark:border-zinc-600 rounded-lg {{ $isPast ? 'bg-zinc-50 dark:bg-zinc-800/50' : '' }}">
+                                <div class="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-3 p-3 border border-zinc-200 dark:border-zinc-600 rounded-lg {{ $isOngoingOrPast ? 'bg-zinc-50 dark:bg-zinc-800/50' : '' }}">
                                     @if($isLast)
-                                        <flux:input wire:model.live="thesis_schedules.{{ $index }}.start_date" type="date" label="Start Date" 
+                                        <flux:input wire:model.live="thesis_schedules.{{ $index }}.deadline" type="date" label="Deadline" 
                                             min="{{ $start_date }}" max="{{ $end_date }}" />
+                                        @if(empty($schedule['deadline']))
+                                            <flux:input type="date" label="Start Date" disabled />
+                                        @else
+                                            <flux:input wire:model.live="thesis_schedules.{{ $index }}.start_date" type="date" label="Start Date" 
+                                                min="{{ $schedule['deadline'] }}" max="{{ $end_date }}" />
+                                        @endif
                                         @if(empty($schedule['start_date']))
                                             <flux:input type="date" label="End Date" disabled />
                                         @else
@@ -520,18 +537,17 @@ $checkDateCollision = function ($startDate, $endDate, $excludeIndex = null, $exc
                                                 min="{{ $schedule['start_date'] }}" max="{{ $end_date }}" />
                                         @endif
                                     @else
-                                        <flux:input wire:model="thesis_schedules.{{ $index }}.start_date" type="date" label="Start Date" 
-                                            min="{{ $start_date }}" max="{{ $end_date }}" disabled />
-                                        <flux:input wire:model="thesis_schedules.{{ $index }}.end_date" type="date" label="End Date" 
-                                            min="{{ $start_date }}" max="{{ $end_date }}" disabled />
+                                        <flux:input wire:model="thesis_schedules.{{ $index }}.deadline" type="date" label="Deadline" disabled />
+                                        <flux:input wire:model="thesis_schedules.{{ $index }}.start_date" type="date" label="Start Date" disabled />
+                                        <flux:input wire:model="thesis_schedules.{{ $index }}.end_date" type="date" label="End Date" disabled />
                                     @endif
-                                    <div class="col-span-1 sm:col-span-2 flex justify-end">
-                                        @if(!$isPast)
+                                    <div class="col-span-1 sm:col-span-3 flex justify-end">
+                                        @if(!$isOngoingOrPast)
                                             <flux:button type="button" wire:click="removeThesisSchedule({{ $index }})" variant="danger" size="sm" class="cursor-pointer">
                                                 Remove
                                             </flux:button>
                                         @else
-                                            <span class="text-xs text-zinc-500 italic">Completed - Cannot be removed</span>
+                                            <span class="text-xs text-zinc-500 italic">Ongoing/Completed - Cannot be removed</span>
                                         @endif
                                     </div>
                                 </div>
@@ -618,6 +634,28 @@ $checkDateCollision = function ($startDate, $endDate, $excludeIndex = null, $exc
                     <flux:button type="button" variant="danger" wire:click="archivePeriod"
                         wire:loading.attr="disabled">
                         Confirm Archive
+                    </flux:button>
+                </div>
+            </div>
+        </flux:modal>
+    @endif
+
+    @if ($showDeleteConfirmModal)
+        <flux:modal name="delete-confirm-modal" wire:model.live="showDeleteConfirmModal" class="max-w-md">
+            <div class="space-y-6">
+                <flux:heading size="lg">Confirm Deletion</flux:heading>
+
+                <p class="text-zinc-600 dark:text-zinc-400">
+                    Are you sure you want to permanently delete this period and all its data? This action cannot be undone.
+                </p>
+
+                <div class="flex justify-end gap-2">
+                    <flux:button type="button" variant="ghost" wire:click="$set('showDeleteConfirmModal', false)">
+                        Cancel
+                    </flux:button>
+                    <flux:button type="button" variant="danger" wire:click="deletePeriod"
+                        wire:loading.attr="disabled">
+                        Confirm Delete
                     </flux:button>
                 </div>
             </div>
