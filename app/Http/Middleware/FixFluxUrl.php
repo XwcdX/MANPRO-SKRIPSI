@@ -15,9 +15,12 @@ class FixFluxUrl
         if ($response->headers->get('content-type') === 'text/html; charset=UTF-8') {
             $content = $response->getContent();
 
-            $content = str_replace('src="/flux/flux.js', 'src="/flux/flux.js', $content);
-            $content = str_replace('href="/flux/flux.css', 'href="/flux/flux.css', $content);
-            
+            $correctUrl = 'https://pce.petra.ac.id/flux/flux.js';
+            $correctCss = 'https://pce.petra.ac.id/flux/flux.css';
+
+            $content = str_replace('src="/flux/flux.js', 'src="' . $correctUrl, $content);
+            $content = str_replace('href="/flux/flux.css', 'href="' . $correctCss, $content);
+
             $response->setContent($content);
         }
 
