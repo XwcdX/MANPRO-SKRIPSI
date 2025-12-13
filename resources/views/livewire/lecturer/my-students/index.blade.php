@@ -263,7 +263,7 @@ new #[Layout('components.layouts.lecturer')] class extends Component {
     </div>
 
     @if($showDetailModal && $selectedStudent)
-        <flux:modal wire:model="showDetailModal" class="max-w-4xl">
+        <flux:modal wire:model="showDetailModal" class="max-w-6xl">
             <flux:heading size="lg">{{ $selectedStudent['name'] }} - Submission History</flux:heading>
             
             @include('partials.session-messages')
@@ -343,7 +343,7 @@ new #[Layout('components.layouts.lecturer')] class extends Component {
     @endif
 
     @if($showAcceptModal)
-        <flux:modal wire:model="showAcceptModal" class="max-w-md">
+        <flux:modal wire:model="showAcceptModal" class="max-w-2xl">
             <flux:heading size="lg">Accept {{ $selectedProposal['type'] === 'thesis' ? 'Thesis' : 'Proposal' }}</flux:heading>
             <p class="text-sm text-zinc-600 dark:text-zinc-400 mt-2">{{ $selectedProposal['type'] === 'thesis' ? 'Accept this thesis submission?' : 'Select division and accept this proposal.' }}</p>
             
@@ -357,7 +357,7 @@ new #[Layout('components.layouts.lecturer')] class extends Component {
                 @error('selectedDivision') <span class="text-red-500 text-xs">{{ $message }}</span> @enderror
             @endif
             
-            <flux:input wire:model="comment" label="Comment (Optional)" placeholder="Add a comment..." class="mt-4" />
+            <flux:textarea wire:model="comment" label="Comment (Optional)" placeholder="Add a comment..." rows="4" class="mt-4" />
             <div class="flex gap-2 mt-6">
                 <flux:spacer />
                 <flux:button wire:click="$set('showAcceptModal', false)" variant="ghost" class="cursor-pointer">Cancel</flux:button>
@@ -367,7 +367,7 @@ new #[Layout('components.layouts.lecturer')] class extends Component {
     @endif
 
     @if($showDeclineModal)
-        <flux:modal wire:model="showDeclineModal" class="max-w-md">
+        <flux:modal wire:model="showDeclineModal" class="max-w-2xl">
             <flux:heading size="lg">Decline Proposal</flux:heading>
             <p class="text-sm text-zinc-600 dark:text-zinc-400 mt-2">Please provide a reason for declining this proposal.</p>
             <flux:textarea wire:model="comment" label="Reason (Required)" placeholder="Explain why you're declining..." rows="4" class="mt-4" required />

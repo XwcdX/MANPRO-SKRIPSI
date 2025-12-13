@@ -15,7 +15,6 @@ new #[Layout('components.layouts.lecturer')] class extends Component {
     public $showDetailModal = false;
     public $selectedStudent = null;
     public $showAcceptModal = false;
-    public $showDeclineModal = false;
     public $selectedProposal = null;
     public $comment = '';
 
@@ -72,13 +71,6 @@ new #[Layout('components.layouts.lecturer')] class extends Component {
         $this->showAcceptModal = true;
     }
 
-    public function confirmDecline($id, $type = 'proposal'): void
-    {
-        $this->selectedProposal = ['id' => $id, 'type' => $type];
-        $this->comment = '';
-        $this->showDeclineModal = true;
-    }
-
     public function acceptProposal(): void
     {
         if ($this->selectedProposal['type'] === 'thesis') {
@@ -93,19 +85,7 @@ new #[Layout('components.layouts.lecturer')] class extends Component {
         $this->loadStudents();
     }
 
-    public function declineProposal(): void
-    {
-        $this->validate(['comment' => 'required|string|min:10']);
-        if ($this->selectedProposal['type'] === 'thesis') {
-            $this->proposalService->declineThesis($this->selectedProposal['id'], $this->comment);
-        } else {
-            $this->proposalService->declineProposal($this->selectedProposal['id'], $this->comment);
-        }
-        session()->flash('success', 'Submission declined.');
-        $this->showDeclineModal = false;
-        $this->showDetailModal = false;
-        $this->loadStudents();
-    }
+
 }; ?>
 
 <div class="space-y-6">
@@ -188,7 +168,7 @@ new #[Layout('components.layouts.lecturer')] class extends Component {
     </div>
 
     @if($showDetailModal && $selectedStudent)
-        <flux:modal wire:model="showDetailModal" class="max-w-4xl">
+        <flux:modal wire:model="showDetailModal" class="max-w-6xl">
             <flux:heading size="lg">{{ $selectedStudent['name'] }} - Submission History</flux:heading>
             
             @php
@@ -217,8 +197,7 @@ new #[Layout('components.layouts.lecturer')] class extends Component {
                                         <flux:button wire:click="viewPdf('{{ $thesis['file_path'] }}')" size="sm" variant="ghost" class="cursor-pointer">View PDF</flux:button>
                                     @endif
                                     @if($thesis['status'] == 2)
-                                        <flux:button wire:click="confirmAccept('{{ $thesis['id'] }}', 'thesis')" size="sm" variant="primary" class="cursor-pointer">Accept</flux:button>
-                                        <flux:button wire:click="confirmDecline('{{ $thesis['id'] }}', 'thesis')" size="sm" variant="danger" class="cursor-pointer">Decline</flux:button>
+                                        <flux:button wire:click="confirmAccept('{{ $thesis['id'] }}', 'thesis')" size="sm" variant="primary" class="cursor-pointer">Review</flux:button>
                                     @endif
                                 </div>
                             </div>
@@ -248,8 +227,7 @@ new #[Layout('components.layouts.lecturer')] class extends Component {
                                         <flux:button wire:click="viewPdf('{{ $proposal['file_path'] }}')" size="sm" variant="ghost" class="cursor-pointer">View PDF</flux:button>
                                     @endif
                                     @if($proposal['status'] == 2)
-                                        <flux:button wire:click="confirmAccept('{{ $proposal['id'] }}', 'proposal')" size="sm" variant="primary" class="cursor-pointer">Accept</flux:button>
-                                        <flux:button wire:click="confirmDecline('{{ $proposal['id'] }}', 'proposal')" size="sm" variant="danger" class="cursor-pointer">Decline</flux:button>
+                                        <flux:button wire:click="confirmAccept('{{ $proposal['id'] }}', 'proposal')" size="sm" variant="primary" class="cursor-pointer">Review</flux:button>
                                     @endif
                                 </div>
                             </div>
@@ -266,28 +244,14 @@ new #[Layout('components.layouts.lecturer')] class extends Component {
     @endif
 
     @if($showAcceptModal)
-        <flux:modal wire:model="showAcceptModal" class="max-w-md">
-            <flux:heading size="lg">Accept {{ $selectedProposal['type'] === 'thesis' ? 'Thesis' : 'Proposal' }}</flux:heading>
-            <p class="text-sm text-zinc-600 dark:text-zinc-400 mt-2">Approve this as division head?</p>
-            <flux:input wire:model="comment" label="Comment (Optional)" placeholder="Add a comment..." class="mt-4" />
+        <flux:modal wire:model="showAcceptModal" class="max-w-2xl">
+            <flux:heading size="lg">Review {{ $selectedProposal['type'] === 'thesis' ? 'Thesis' : 'Proposal' }}</flux:heading>
+            <p class="text-sm text-zinc-600 dark:text-zinc-400 mt-2">Review the submission and approve as division head. Comment is optional.</p>
+            <flux:textarea wire:model="comment" label="Comment (Optional)" placeholder="Add your review comments..." rows="4" class="mt-4" />
             <div class="flex gap-2 mt-6">
                 <flux:spacer />
                 <flux:button wire:click="$set('showAcceptModal', false)" variant="ghost" class="cursor-pointer">Cancel</flux:button>
                 <flux:button wire:click="acceptProposal" variant="primary" class="cursor-pointer">Accept</flux:button>
-            </div>
-        </flux:modal>
-    @endif
-
-    @if($showDeclineModal)
-        <flux:modal wire:model="showDeclineModal" class="max-w-md">
-            <flux:heading size="lg">Decline {{ $selectedProposal['type'] === 'thesis' ? 'Thesis' : 'Proposal' }}</flux:heading>
-            <p class="text-sm text-zinc-600 dark:text-zinc-400 mt-2">Provide reason for declining.</p>
-            <flux:textarea wire:model="comment" label="Reason (Required)" placeholder="Explain why..." rows="4" class="mt-4" required />
-            @error('comment') <span class="text-red-500 text-xs">{{ $message }}</span> @enderror
-            <div class="flex gap-2 mt-6">
-                <flux:spacer />
-                <flux:button wire:click="$set('showDeclineModal', false)" variant="ghost" class="cursor-pointer">Cancel</flux:button>
-                <flux:button wire:click="declineProposal" variant="danger" class="cursor-pointer">Decline</flux:button>
             </div>
         </flux:modal>
     @endif
