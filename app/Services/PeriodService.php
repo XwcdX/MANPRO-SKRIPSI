@@ -63,7 +63,7 @@ class PeriodService
         if ($endMonth >= 9 || $endMonth <= 2) {
             return "Gasal " . ($endYear - 1) . "/" . $endYear;
         } else {
-            return "Genap " . $endYear . "/" . ($endYear + 1);
+            return "Genap " . ($endYear - 1) . "/" . $endYear;
         }
     }
 

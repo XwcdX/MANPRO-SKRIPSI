@@ -21,7 +21,11 @@ return Application::configure(basePath: dirname(__DIR__))
             'have_period' => HavePeriodMiddleware::class,
             'division_head' => DivisionHeadOnly::class,
         ]);
-        
+
+        $middleware->web(append: [
+            \App\Http\Middleware\FixFluxUrl::class,
+        ]);
+
         $middleware->redirectGuestsTo(function ($request) {
             if ($request->expectsJson()) {
                 return null;

@@ -16,7 +16,7 @@ new #[Layout('components.layouts.auth')] class extends Component {
     {
         $this->period = Period::whereNull('archived_at')
             ->where('start_date', '<=', now())
-            ->where('registration_end', '>=', now())
+            ->where('end_date', '>=', now())
             ->first();
     }
     public function register(PeriodService $periodService)
