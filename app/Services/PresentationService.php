@@ -6,6 +6,7 @@ use App\Models\ThesisPresentation;
 use App\Models\PresentationExaminer;
 use App\Models\LecturerAvailability;
 use App\Models\PeriodSchedule;
+use Carbon\Carbon;
 use Illuminate\Support\Facades\DB;
 
 /**
@@ -190,25 +191,98 @@ class PresentationService
      * @param string $endTime End time
      * @return array|null Existing presentation info or null
      */
-    public function findExistingPresentation(string $venueId, string $date, string $startTime, string $endTime): ?array
+    public function getValidCombinations(string $periodScheduleId, array $studentIds, ?string $excludePresentationId = null): array
     {
-        $existing = ThesisPresentation::where('venue_id', $venueId)
-            ->where('presentation_date', $date)
-            ->where('start_time', $startTime)
-            ->where('end_time', $endTime)
-            ->with(['venue', 'leadExaminer.lecturer', 'examiners.lecturer'])
-            ->first();
-
-        if (!$existing) {
-            return null;
+        if (empty($studentIds)) {
+            return [];
         }
 
-        return [
-            'venue' => $existing->venue->name,
-            'date' => \Carbon\Carbon::parse($existing->presentation_date)->format('d M Y'),
-            'time' => substr($existing->start_time, 0, 5) . '-' . substr($existing->end_time, 0, 5),
-            'lead_examiner_id' => $existing->leadExaminer?->lecturer_id,
-            'examiner_ids' => $existing->examiners()->where('is_lead_examiner', false)->pluck('lecturer_id')->toArray(),
-        ];
+        $schedule = PeriodSchedule::find($periodScheduleId);
+        if (!$schedule) {
+            return [];
+        }
+
+        $supervisorIds = DB::table('student_lecturers')
+            ->whereIn('student_id', $studentIds)
+            ->whereIn('role', [0, 1])
+            ->where('status', 'active')
+            ->pluck('lecturer_id')
+            ->unique()
+            ->toArray();
+
+        if (empty($supervisorIds)) {
+            return [];
+        }
+
+        $period = $schedule->period;
+        $type = $schedule->type === 'proposal_hearing' ? 'proposal_hearing' : 'thesis';
+        $timeSlots = app(AvailabilityService::class)->generateTimeSlotsWithoutBreak($period, $type);
+
+        $dates = [];
+        $current = Carbon::parse($schedule->start_date);
+        $end = Carbon::parse($schedule->end_date);
+        while ($current->lte($end)) {
+            $dates[] = $current->format('Y-m-d');
+            $current->addDay();
+        }
+
+        $busyLecturers = [];
+        foreach ($dates as $date) {
+            foreach ($timeSlots as $slot) {
+                [$startTime, $endTime] = explode('-', $slot);
+                
+                $busy = PresentationExaminer::whereHas('thesisPresentation', function ($query) use ($date, $startTime, $endTime, $excludePresentationId) {
+                    $query->where('presentation_date', $date)
+                        ->when($excludePresentationId, function($q) use ($excludePresentationId) {
+                            $q->where('id', '!=', $excludePresentationId);
+                        })
+                        ->where(function ($q) use ($startTime, $endTime) {
+                            $q->whereBetween('start_time', [$startTime, $endTime])
+                              ->orWhereBetween('end_time', [$startTime, $endTime])
+                              ->orWhere(function ($q2) use ($startTime, $endTime) {
+                                  $q2->where('start_time', '<=', $startTime)
+                                     ->where('end_time', '>=', $endTime);
+                              });
+                        });
+                })->pluck('lecturer_id')->unique()->toArray();
+                
+                $unavailable = LecturerAvailability::where('period_schedule_id', $periodScheduleId)
+                    ->where('date', $date)
+                    ->where('time_slot', $slot)
+                    ->where('is_available', false)
+                    ->pluck('lecturer_id')
+                    ->toArray();
+                
+                $busyLecturers["{$date}|{$slot}"] = array_merge($busy, $unavailable);
+            }
+        }
+
+        $totalLecturers = \App\Models\Lecturer::count();
+        $combinations = [];
+
+        foreach ($dates as $date) {
+            foreach ($timeSlots as $slot) {
+                $key = "{$date}|{$slot}";
+                $busyIds = $busyLecturers[$key] ?? [];
+                
+                $supervisorsBusy = array_intersect($supervisorIds, $busyIds);
+                if (!empty($supervisorsBusy)) {
+                    continue;
+                }
+                
+                $availableCount = $totalLecturers - count(array_unique(array_merge($busyIds, $supervisorIds)));
+                if ($availableCount < 2) {
+                    continue;
+                }
+                
+                $combinations[] = [
+                    'date' => $date,
+                    'time' => $slot,
+                    'label' => \Carbon\Carbon::parse($date)->format('d M Y') . ' • ' . $slot,
+                ];
+            }
+        }
+
+        return $combinations;
     }
 }

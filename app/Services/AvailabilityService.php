@@ -92,6 +92,25 @@ class AvailabilityService
     }
 
     /**
+     * Generate time slots without break time (for presentation scheduling).
+     * 
+     * @param Period $period
+     * @param string $type
+     * @return array Array of time slot strings without break
+     */
+    public function generateTimeSlotsWithoutBreak(Period $period, string $type = 'proposal_hearing'): array
+    {
+        $slots = $this->generateTimeSlots($period, $type);
+        $result = [];
+        foreach ($slots as $slot) {
+            if (is_array($slot) && !$slot['disabled']) {
+                $result[] = $slot['value'];
+            }
+        }
+        return $result;
+    }
+
+    /**
      * Get date range for a specific period schedule.
      * 
      * @param PeriodSchedule $schedule The period schedule
