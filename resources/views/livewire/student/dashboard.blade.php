@@ -155,7 +155,7 @@ new class extends Component {
                 @foreach($steps as $index => $step)
                     <div class="border-b border-gray-200 last:border-b-0">
                         <button type="button"
-                            class="w-full py-3 px-1 text-left font-medium text-sm focus:outline-none flex items-center justify-between
+                            class="w-full py-3 px-1 text-left font-medium text-sm focus:outline-none flex items-center justify-between cursor-pointer
                             {{ $index < $studentStatus ? 'text-green-600 bg-green-50 hover:bg-green-100' : ($index == $studentStatus ? 'text-black bg-gray-100 hover:bg-gray-200' : 'text-gray-500 hover:bg-gray-50') }}"
                             data-accordion-target="#accordion-body-{{ $index }}"
                             aria-expanded="{{ $index == $currentStatus ? 'true' : 'false' }}"

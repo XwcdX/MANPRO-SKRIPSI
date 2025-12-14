@@ -145,7 +145,7 @@ new class extends Component {
                     <button type="submit"
                         wire:loading.attr="disabled"
                         wire:target="file,submit"
-                        class="w-full sm:w-auto px-8 py-2 bg-gray-700 text-white font-medium rounded-lg hover:bg-gray-800 transition duration-200 disabled:opacity-60 disabled:cursor-not-allowed">
+                        class="w-full sm:w-auto px-8 py-2 bg-gray-700 text-white font-medium rounded-lg hover:bg-gray-800 transition duration-200 cursor-pointer disabled:opacity-60 disabled:cursor-not-allowed">
                         <!-- Normal (idle) -->
                         <span>
                             Submit
@@ -186,7 +186,7 @@ new class extends Component {
                         @if ($h->comment)
                             <button
                                 wire:click="openCommentModal({{ json_encode($h->comment) }})"
-                                class="px-3 py-1 text-xs font-medium text-white bg-blue-600 rounded hover:bg-blue-700 transition">
+                                class="px-3 py-1 text-xs font-medium text-white bg-blue-600 rounded hover:bg-blue-700 transition cursor-pointer">
                                 Lihat
                             </button>
                         @else
@@ -222,7 +222,7 @@ new class extends Component {
                 <div class="px-6 py-3 bg-gray-50 text-right">
                     <button
                         wire:click="closeCommentModal"
-                        class="px-4 py-2 text-sm font-medium text-gray-700 bg-gray-200 rounded hover:bg-gray-300 transition">
+                        class="px-4 py-2 text-sm font-medium text-gray-700 bg-gray-200 rounded hover:bg-gray-300 transition cursor-pointer">
                         Tutup
                     </button>
                 </div>

@@ -265,14 +265,14 @@ new class extends Component {
                             @if($selectedScheduleId == $s['id'])
                                 <button
                                     wire:click="confirmCancel"
-                                    class="w-full bg-red-600 text-white py-2 rounded">
+                                    class="w-full bg-red-600 text-white py-2 rounded cursor-pointer">
                                     Cancel
                                 </button>
                             @else
                                 <button
                                     id="btn-choose-{{ $s['id'] }}"
                                     wire:click="confirmChoose('{{ $s['id'] }}')"
-                                    class="w-full bg-blue-600 text-white py-2 rounded">
+                                    class="w-full bg-blue-600 text-white py-2 rounded cursor-pointer">
                                     Daftar
                                 </button>
                             @endif
