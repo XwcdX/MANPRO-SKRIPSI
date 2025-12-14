@@ -180,14 +180,14 @@ new class extends Component {
             @if ($status1 === 'pending')
                 <button
                     wire:click="cancel(0)"
-                    class="px-3 py-1.5 sm:px-6 sm:py-2.5 bg-red-600 hover:bg-red-700 text-white font-medium rounded-lg text-sm sm:text-base self-end sm:self-center">
+                    class="px-3 py-1.5 sm:px-6 sm:py-2.5 bg-red-600 hover:bg-red-700 text-white font-medium rounded-lg text-sm sm:text-base self-end sm:self-center cursor-pointer">
                     Cancel
                 </button>
 
             @elseif ($status1 === 'accepted' && !$editMode1)
                 <button
                     wire:click="enableEdit(0)"
-                    class="px-3 py-1.5 sm:px-6 sm:py-2.5 bg-green-600 hover:bg-green-700 text-white font-medium rounded-lg text-sm sm:text-base self-end sm:self-center">
+                    class="px-3 py-1.5 sm:px-6 sm:py-2.5 bg-green-600 hover:bg-green-700 text-white font-medium rounded-lg text-sm sm:text-base self-end sm:self-center cursor-pointer">
                     Change
                 </button>
 
@@ -195,7 +195,7 @@ new class extends Component {
                 <button
                     wire:click="submit(0)"
                     wire:loading.attr="disabled"
-                    class="px-3 py-1.5 sm:px-6 sm:py-2.5 bg-gray-700 text-white font-medium rounded-lg text-sm sm:text-base hover:bg-gray-800 self-end sm:self-center">
+                    class="px-3 py-1.5 sm:px-6 sm:py-2.5 bg-gray-700 text-white font-medium rounded-lg text-sm sm:text-base hover:bg-gray-800 self-end sm:self-center cursor-pointer">
                     Ajukan
                 </button>
             @endif
@@ -228,14 +228,14 @@ new class extends Component {
             @if ($status2 === 'pending')
                 <button
                     wire:click="cancel(1)"
-                    class="px-3 py-1.5 sm:px-6 sm:py-2.5 bg-red-600 hover:bg-red-700 text-white font-medium rounded-lg text-sm sm:text-base self-end sm:self-center">
+                    class="px-3 py-1.5 sm:px-6 sm:py-2.5 bg-red-600 hover:bg-red-700 text-white font-medium rounded-lg text-sm sm:text-base self-end sm:self-center cursor-pointer">
                     Cancel
                 </button>
 
             @elseif ($status2 === 'accepted' && !$editMode2)
                 <button
                     wire:click="enableEdit(1)"
-                    class="px-3 py-1.5 sm:px-6 sm:py-2.5 bg-green-600 hover:bg-green-700 text-white font-medium rounded-lg text-sm sm:text-base self-end sm:self-center">
+                    class="px-3 py-1.5 sm:px-6 sm:py-2.5 bg-green-600 hover:bg-green-700 text-white font-medium rounded-lg text-sm sm:text-base self-end sm:self-center cursor-pointer">
                     Change
                 </button>
 
@@ -243,7 +243,7 @@ new class extends Component {
                 <button
                     wire:click="submit(1)"
                     wire:loading.attr="disabled"
-                    class="px-3 py-1.5 sm:px-6 sm:py-2.5 bg-gray-700 text-white font-medium rounded-lg text-sm sm:text-base hover:bg-gray-800 self-end sm:self-center">
+                    class="px-3 py-1.5 sm:px-6 sm:py-2.5 bg-gray-700 text-white font-medium rounded-lg text-sm sm:text-base hover:bg-gray-800 self-end sm:self-center cursor-pointer">
                     Ajukan
                 </button>
             @endif

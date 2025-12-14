@@ -16,8 +16,28 @@ new class extends Component {
     public string $type; // 'proposal' atau 'thesis'
     public string $description = '';
     public $file;
+    public bool $showCommentModal = false;
+    public string $selectedComment = '';
+
 
     protected string $paginationTheme = 'tailwind';
+
+    public function openCommentModal(?string $comment)
+    {
+        if (! $comment) {
+            return;
+        }
+
+        $this->selectedComment = $comment;
+        $this->showCommentModal = true;
+    }
+
+    public function closeCommentModal()
+    {
+        $this->showCommentModal = false;
+        $this->selectedComment = '';
+    }
+
 
     public function mount(string $type)
     {
@@ -125,7 +145,7 @@ new class extends Component {
                     <button type="submit"
                         wire:loading.attr="disabled"
                         wire:target="file,submit"
-                        class="w-full sm:w-auto px-8 py-2 bg-gray-700 text-white font-medium rounded-lg hover:bg-gray-800 transition duration-200 disabled:opacity-60 disabled:cursor-not-allowed">
+                        class="w-full sm:w-auto px-8 py-2 bg-gray-700 text-white font-medium rounded-lg hover:bg-gray-800 transition duration-200 cursor-pointer disabled:opacity-60 disabled:cursor-not-allowed">
                         <!-- Normal (idle) -->
                         <span>
                             Submit
@@ -162,7 +182,17 @@ new class extends Component {
                             Lihat File
                         </a>
                     </td>
-                    <td class="px-6 py-4">{{ $h->comment }}</td>
+                    <td class="px-6 py-4">
+                        @if ($h->comment)
+                            <button
+                                wire:click="openCommentModal({{ json_encode($h->comment) }})"
+                                class="px-3 py-1 text-xs font-medium text-white bg-blue-600 rounded hover:bg-blue-700 transition cursor-pointer">
+                                Lihat
+                            </button>
+                        @else
+                            <span class="text-gray-400 italic">Tidak ada</span>
+                        @endif
+                    </td>
                     <td class="px-6 py-4 font-semibold">{{ $h->status_text }}</td>
                 </tr>
                 @endforeach
@@ -173,4 +203,32 @@ new class extends Component {
             {{ $this->history->links() }}
         </div>
     </div>
+
+    @if ($showCommentModal)
+        <div class="fixed inset-0 z-50 flex items-center justify-center">
+            <div class="bg-white rounded-xl w-full max-w-md mx-4 overflow-hidden border
+                shadow-2xl ring-1 ring-black/10 pointer-events-auto">
+                
+                <div class="px-6 py-4 border-b">
+                    <h3 class="text-lg font-semibold text-gray-700">
+                        Komentar
+                    </h3>
+                </div>
+
+                <div class="px-6 py-4 text-sm text-gray-700 whitespace-pre-line max-h-80 overflow-y-auto">
+                    {{ $selectedComment }}
+                </div>
+
+                <div class="px-6 py-3 bg-gray-50 text-right">
+                    <button
+                        wire:click="closeCommentModal"
+                        class="px-4 py-2 text-sm font-medium text-gray-700 bg-gray-200 rounded hover:bg-gray-300 transition cursor-pointer">
+                        Tutup
+                    </button>
+                </div>
+
+            </div>
+        </div>
+    @endif
+
 </div>

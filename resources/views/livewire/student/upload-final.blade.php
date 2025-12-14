@@ -135,7 +135,7 @@ new class extends Component {
                 <button type="submit"
                     wire:loading.attr="disabled"
                     wire:target="file,submit"
-                    class="w-full sm:w-auto px-8 py-2 bg-gray-700 text-white font-medium rounded-lg hover:bg-gray-800 transition duration-200 disabled:opacity-60 disabled:cursor-not-allowed">
+                    class="w-full sm:w-auto px-8 py-2 bg-gray-700 text-white font-medium rounded-lg hover:bg-gray-800 transition duration-200 cursor-pointer disabled:opacity-60 disabled:cursor-not-allowed">
                     Submit
                 </button>
             </div>

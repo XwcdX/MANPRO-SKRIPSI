@@ -92,7 +92,7 @@ new class extends Component {
     <div class="flex flex-col sm:flex-row sm:justify-end">
         <button 
             type="submit"  wire:loading.attr="disabled"
-            class="px-8 py-2.5 bg-gray-700 text-white font-medium rounded-lg hover:bg-gray-800 
+            class="px-8 py-2.5 bg-gray-700 text-white font-medium rounded-lg hover:bg-gray-800 cursor-pointer
                    transition w-full sm:w-auto">
             {{-- Saat tidak loading --}}
             <span wire:loading.remove>
