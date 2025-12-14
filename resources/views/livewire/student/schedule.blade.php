@@ -223,7 +223,7 @@ new class extends Component {
             Jadwal Sidang {{ $type === 'final' ? 'Skripsi' : 'Proposal' }}
         </h1>
 
-        @if($selectedScheduleId && $this->selectedSchedule && now()->greaterThan(\Carbon\Carbon::parse($this->selectedSchedule->start_date)->subWeek()))
+        @if($selectedScheduleId && $this->selectedSchedule && now()->greaterThan(\Carbon\Carbon::parse($this->selectedSchedule->deadline)))
             <div class="w-full max-w-sm sm:max-w-lg bg-gray-100 p-6 md:p-10 rounded-lg shadow-xl relative">
                 @if($lokasi && $tanggal && $jam)
                     <div class="text-center space-y-3 md:space-y-4">
