@@ -221,7 +221,9 @@ new #[Layout('components.layouts.lecturer')] class extends Component {
 
             $column = $schedule->type === 'proposal_hearing' ? 'proposal_schedule_id' : 'thesis_schedule_id';
             $totalStudents = Student::where('status', 3)->where($column, $schedule->id)->count();
-            $scheduledStudents = ThesisPresentation::where('period_schedule_id', $schedule->id)->count();
+            $scheduledStudents = ThesisPresentation::where('period_schedule_id', $schedule->id)
+                ->whereHas('student', fn($q) => $q->where('status', 3))
+                ->count();
             $unscheduled = $totalStudents - $scheduledStudents;
 
             $result[] = [
