@@ -25,7 +25,7 @@
             <form method="POST" action="{{ route('logout') }}">
                 @csrf
                 <button type="submit"
-                    class="flex items-center w-full px-4 py-2.5 text-gray-300 hover:bg-gray-700 rounded-lg text-left">
+                    class="flex items-center w-full px-4 py-2.5 text-gray-300 hover:bg-gray-700 rounded-lg text-left cursor-pointer">
                     Log out
                 </button>
             </form>
@@ -37,7 +37,7 @@
     <main id="mainContent" class="flex-1 flex flex-col ml-0 lg:ml-64 transition-all duration-300 min-w-0">
         <header class="flex items-center justify-between p-5 bg-white bg-opacity-70 backdrop-blur-sm">
             <div class="flex items-center space-x-4">
-                <button id="hamburger" class="text-gray-600 lg:hidden">
+                <button id="hamburger" class="text-gray-600 lg:hidden cursor-pointer">
                     <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"
                         xmlns="http://www.w3.org/2000/svg">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
@@ -47,12 +47,12 @@
                 <h1 class="text-xl font-semibold text-gray-800">Pendaftaran & Penjadwalan Proposal Skripsi</h1>
             </div>
             <div class="relative">
-                <button id="userMenuButton" class="text-md font-medium text-gray-700">
+                <button id="userMenuButton" class="text-md font-medium text-gray-700 cursor-pointer">
                     Hello, {{ $user->name ?? 'Unknown User' }}
                 </button>
 
                 <div id="userMenu" class="absolute right-0 mt-2 w-52 bg-white shadow-lg rounded-lg py-2 hidden">
-                    <button id="resignButton" class="block w-full text-left px-4 py-2 text-red-600 hover:bg-gray-100">
+                    <button id="resignButton" class="block w-full text-left px-4 py-2 text-red-600 hover:bg-gray-100 cursor-pointer">
                         Mengundurkan Diri
                     </button>
 
