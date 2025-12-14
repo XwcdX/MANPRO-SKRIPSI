@@ -16,8 +16,14 @@ new #[Layout('components.layouts.auth')] class extends Component {
     {
         $this->period = Period::whereNull('archived_at')
             ->where('start_date', '<=', now())
-            ->whereHas('proposalHearings', function ($q) {
-                $q->where('deadline', '>=', now());
+            ->where(function ($q) {
+                $q->whereHas('proposalHearings', function ($qh) {
+                    $qh->where('deadline', '>=', now());
+                })
+                ->orWhereDoesntHave('proposalHearings', function ($qh) {
+                    
+                })
+                ->where('end_date', '>=', now());
             })
             ->first();
     }
