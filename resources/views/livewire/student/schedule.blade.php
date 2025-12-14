@@ -239,14 +239,14 @@ new class extends Component {
             </div>
         @else
 
-            <div class="grid grid-cols-2 md:grid-cols-3 gap-4 w-full max-w-4xl">
+            <div class="grid grid-cols-2 md:grid-cols-3 gap-4 w-full">
 
                 @foreach($schedules as $i => $s)
                     @php
                         $i++;
                         $start = \Carbon\Carbon::parse($s['start_date'])->locale('id');
                         $end = \Carbon\Carbon::parse($s['end_date'])->locale('id');
-                        $deadline = $start->copy()->subWeek()->locale('id');
+                        $deadline = \Carbon\Carbon::parse($s['deadline'])->locale('id');
                         $now = now();
                         $canAction = $now->lessThan($deadline);
                     @endphp
