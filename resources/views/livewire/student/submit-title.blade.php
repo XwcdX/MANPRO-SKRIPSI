@@ -95,18 +95,18 @@ new class extends Component {
             class="px-8 py-2.5 bg-gray-700 text-white font-medium rounded-lg hover:bg-gray-800 cursor-pointer
                    transition w-full sm:w-auto">
             {{-- Saat tidak loading --}}
-            <span wire:loading.remove>
+            <span wire:loading.remove wire:target="submit">
                 {{ $status > 0 ? 'Change' : 'Submit' }}
             </span>
 
-            {{-- Saat loading --}}
-            <span wire:loading wire:target="submit">
+            {{-- Saat loading -- RUSAKK ANEH}}
+            {{-- <span wire:loading wire:target="submit">
                 <svg class="animate-spin h-4 w-4 text-white inline-block mr-2" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
                     <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
                     <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v4l3.5-3.5L12 0v4a8 8 0 11-8 8h4z"></path>
                 </svg>
                 Processing...
-            </span>
+            </span> --}}
         </button>
     </div>
 </form>
