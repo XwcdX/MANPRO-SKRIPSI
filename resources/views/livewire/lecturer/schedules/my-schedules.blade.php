@@ -2,9 +2,7 @@
 
 use Livewire\Attributes\Layout;
 use Livewire\Volt\Component;
-use App\Models\ThesisPresentation;
-use App\Models\Student;
-use App\Models\StudentStatusHistory;
+use App\Services\PresentationService;
 use Carbon\Carbon;
 
 new #[Layout('components.layouts.lecturer')] 
@@ -24,57 +22,29 @@ class extends Component {
 
     public function submitDecision(): void
     {
-        $presentation = ThesisPresentation::with(['student', 'periodSchedule'])->find($this->selectedPresentation);
-        if (!$presentation) return;
+        $success = app(PresentationService::class)->submitDecision(
+            $this->selectedPresentation,
+            $this->decision,
+            $this->notes
+        );
 
-        $student = $presentation->student;
-        $oldStatus = $student->status;
-        
-        if ($this->decision === 'pass') {
-            $newStatus = 4;
-            $student->update(['status' => $newStatus]);
-        } else {
-            $newStatus = 2;
-            $scheduleType = $presentation->periodSchedule->type;
-            $updateData = ['status' => $newStatus];
-            
-            if ($scheduleType === 'proposal_hearing') {
-                $updateData['proposal_schedule_id'] = null;
-            } else {
-                $updateData['thesis_schedule_id'] = null;
-            }
-            
-            $student->update($updateData);
+        if ($success) {
+            $this->showModal = false;
+            $this->reset(['selectedPresentation', 'decision', 'notes']);
+            session()->flash('success', 'Decision submitted successfully.');
         }
-
-        StudentStatusHistory::create([
-            'student_id' => $student->id,
-            'period_id' => $presentation->periodSchedule->period_id,
-            'previous_status' => $oldStatus,
-            'new_status' => $newStatus,
-            'changed_by' => auth()->id(),
-            'reason' => $this->notes ?: ($this->decision === 'pass' ? 'Passed presentation' : 'Failed presentation'),
-        ]);
-
-        $this->showModal = false;
-        $this->reset(['selectedPresentation', 'decision', 'notes']);
-        session()->flash('success', 'Decision submitted successfully.');
     }
 
 
 
     public function with(): array
     {
-        $presentations = ThesisPresentation::with(['student', 'venue', 'periodSchedule.period', 'examiners.lecturer', 'leadExaminer.lecturer'])
-            ->whereHas('examiners', fn($q) => $q->where('lecturer_id', auth()->id()))
-            ->orderBy('presentation_date', 'asc')
-            ->orderBy('start_time', 'asc')
-            ->get();
+        $presentations = app(PresentationService::class)->getLecturerPresentations(auth()->id());
 
         return [
             'presentations' => $presentations,
-            'isLeadExaminer' => fn($presentation) => $presentation->leadExaminer?->lecturer_id === auth()->id(),
-            'isPastPresentation' => fn($presentation) => Carbon::parse($presentation->presentation_date)->setTimeFromTimeString($presentation->end_time)->isPast(),
+            'isLeadExaminer' => fn($presentation) => ($presentation['lead_examiner']['lecturer_id'] ?? null) === auth()->id(),
+            'isPastPresentation' => fn($presentation) => Carbon::parse($presentation['presentation_date'])->setTimeFromTimeString($presentation['end_time'])->isPast(),
         ];
     }
 };
@@ -94,7 +64,7 @@ class extends Component {
                 @endif
             </div>
 
-            @if($presentations->isEmpty())
+            @if(empty($presentations))
                 <div class="text-center py-12 text-zinc-500 dark:text-zinc-400">
                     No presentations assigned to you yet.
                 </div>
@@ -104,15 +74,15 @@ class extends Component {
                         @php
                             $isLead = $isLeadExaminer($presentation);
                             $isPast = $isPastPresentation($presentation);
-                            $schedule = $presentation->periodSchedule;
-                            $type = $schedule->type === 'proposal_hearing' ? 'Proposal' : 'Thesis Defense';
+                            $schedule = $presentation['period_schedule'];
+                            $type = $schedule['type'] === 'proposal_hearing' ? 'Proposal' : 'Thesis Defense';
                         @endphp
-                        <div class="border border-zinc-200 dark:border-zinc-700 rounded-lg p-6 hover:shadow-md transition {{ $isPast && (!$isLead || $presentation->student->status !== 3) ? 'bg-zinc-100 dark:bg-zinc-800/50 opacity-60' : '' }}">
+                        <div class="border border-zinc-200 dark:border-zinc-700 rounded-lg p-6 hover:shadow-md transition {{ $isPast && (!$isLead || $presentation['student']['status'] !== 3) ? 'bg-zinc-100 dark:bg-zinc-800/50 opacity-60' : '' }}">
                             <div class="flex items-start justify-between">
                                 <div class="flex-1">
                                     <div class="flex items-center gap-3 mb-3">
-                                        <h3 class="text-xl font-semibold text-black dark:text-white">{{ $presentation->student->name }}</h3>
-                                        <span class="px-3 py-1 text-xs font-medium rounded-full {{ $schedule->type === 'proposal_hearing' ? 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400' : 'bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-400' }}">
+                                        <h3 class="text-xl font-semibold text-black dark:text-white">{{ $presentation['student']['name'] }}</h3>
+                                        <span class="px-3 py-1 text-xs font-medium rounded-full {{ $schedule['type'] === 'proposal_hearing' ? 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400' : 'bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-400' }}">
                                             {{ $type }}
                                         </span>
                                         @if($isLead)
@@ -130,52 +100,54 @@ class extends Component {
                                     <div class="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
                                         <div>
                                             <p class="text-zinc-500 dark:text-zinc-400">Period</p>
-                                            <p class="text-black dark:text-white font-medium">{{ $presentation->periodSchedule->period->name }}</p>
+                                            <p class="text-black dark:text-white font-medium">{{ $presentation['period_schedule']['period']['name'] }}</p>
                                         </div>
                                         <div>
                                             <p class="text-zinc-500 dark:text-zinc-400">Venue</p>
-                                            <p class="text-black dark:text-white font-medium">{{ $presentation->venue->name }} - {{ $presentation->venue->location }}</p>
+                                            <p class="text-black dark:text-white font-medium">{{ $presentation['venue']['name'] }} - {{ $presentation['venue']['location'] }}</p>
                                         </div>
                                         <div>
                                             <p class="text-zinc-500 dark:text-zinc-400">Date & Time</p>
                                             <p class="text-black dark:text-white font-medium">
-                                                {{ Carbon::parse($presentation->presentation_date)->format('d M Y') }} | 
-                                                {{ substr($presentation->start_time, 0, 5) }} - {{ substr($presentation->end_time, 0, 5) }}
+                                                {{ Carbon::parse($presentation['presentation_date'])->format('d M Y') }} | 
+                                                {{ substr($presentation['start_time'], 0, 5) }} - {{ substr($presentation['end_time'], 0, 5) }}
                                             </p>
                                         </div>
                                         <div>
                                             <p class="text-zinc-500 dark:text-zinc-400">Topic</p>
-                                            <p class="text-black dark:text-white font-medium">{{ $presentation->student->thesis_title ?: 'Not set' }}</p>
+                                            <p class="text-black dark:text-white font-medium">{{ $presentation['student']['thesis_title'] ?: 'Not set' }}</p>
                                         </div>
                                     </div>
 
                                     <div class="mt-4">
                                         <p class="text-zinc-500 dark:text-zinc-400 text-sm mb-2">Examiners</p>
                                         <div class="flex flex-wrap gap-2">
-                                            @if($presentation->leadExaminer)
+                                            @if(!empty($presentation['lead_examiner']))
                                                 <span class="px-3 py-1 text-sm bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400 rounded-full">
-                                                    ⭐ {{ $presentation->leadExaminer->lecturer->name }}
+                                                    ⭐ {{ $presentation['lead_examiner']['lecturer']['name'] }}
                                                 </span>
                                             @endif
-                                            @foreach($presentation->examiners()->where('is_lead_examiner', false)->get() as $examiner)
-                                                <span class="px-3 py-1 text-sm bg-zinc-100 text-zinc-700 dark:bg-zinc-800 dark:text-zinc-300 rounded-full">
-                                                    {{ $examiner->lecturer->name }}
-                                                </span>
+                                            @foreach($presentation['examiners'] ?? [] as $examiner)
+                                                @if(!($examiner['is_lead_examiner'] ?? false))
+                                                    <span class="px-3 py-1 text-sm bg-zinc-100 text-zinc-700 dark:bg-zinc-800 dark:text-zinc-300 rounded-full">
+                                                        {{ $examiner['lecturer']['name'] }}
+                                                    </span>
+                                                @endif
                                             @endforeach
                                         </div>
                                     </div>
 
-                                    @if($presentation->notes)
+                                    @if(!empty($presentation['notes']))
                                         <div class="mt-4">
                                             <p class="text-zinc-500 dark:text-zinc-400 text-sm">Notes</p>
-                                            <p class="text-black dark:text-white text-sm">{{ $presentation->notes }}</p>
+                                            <p class="text-black dark:text-white text-sm">{{ $presentation['notes'] }}</p>
                                         </div>
                                     @endif
                                 </div>
 
-                                @if($isLead && $presentation->student->status === 3)
+                                @if($isLead && $presentation['student']['status'] === 3)
                                     <div class="ml-4">
-                                        <flux:button wire:click="openModal('{{ $presentation->id }}')" variant="primary" size="sm" class="cursor-pointer">
+                                        <flux:button wire:click="openModal('{{ $presentation['id'] }}')" variant="primary" size="sm" class="cursor-pointer">
                                             Take Action
                                         </flux:button>
                                     </div>

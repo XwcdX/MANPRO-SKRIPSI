@@ -87,24 +87,7 @@ class extends Component {
     {
         if (!$this->selectedType) return [];
 
-        $presentations = \App\Models\ThesisPresentation::where('period_schedule_id', $this->selectedType)
-            ->whereHas('examiners', fn($q) => $q->where('lecturer_id', auth()->id()))
-            ->with('student')
-            ->get();
-
-        $locked = [];
-        foreach ($presentations as $p) {
-            $date = Carbon::parse($p->presentation_date)->format('Y-m-d');
-            $timeSlot = substr($p->start_time, 0, 5) . '-' . substr($p->end_time, 0, 5);
-            $key = $date . '_' . $timeSlot;
-            
-            if (!isset($locked[$key])) {
-                $locked[$key] = [];
-            }
-            $locked[$key][] = $p->student->name;
-        }
-        
-        return $locked;
+        return app(AvailabilityService::class)->getLockedSlots(auth()->id(), $this->selectedType);
     }
 
 
@@ -140,55 +123,21 @@ class extends Component {
             return [];
         }
 
-        $period = app(PeriodService::class)->findPeriod($this->selectedPeriod);
-        if (!$period) {
-            return [];
-        }
-
-        $today = now()->format('Y-m-d');
-        $types = [];
-        
-        $proposalSchedules = $period->schedules()
-            ->where('type', 'proposal_hearing')
-            ->where('start_date', '>=', $today)
-            ->orderBy('start_date')
-            ->get();
-        
-        $thesisSchedules = $period->schedules()
-            ->where('type', 'thesis_defense')
-            ->where('start_date', '>=', $today)
-            ->orderBy('start_date')
-            ->get();
-        
-        foreach ($proposalSchedules as $index => $schedule) {
-            $label = 'Proposal Hearing ' . ($index + 1) . ' (' . 
-                    Carbon::parse($schedule->start_date)->format('d M') . ' - ' . 
-                    Carbon::parse($schedule->end_date)->format('d M') . ')';
-            $types[$schedule->id] = $label;
-        }
-        
-        foreach ($thesisSchedules as $index => $schedule) {
-            $label = 'Thesis Defense ' . ($index + 1) . ' (' . 
-                    Carbon::parse($schedule->start_date)->format('d M') . ' - ' . 
-                    Carbon::parse($schedule->end_date)->format('d M') . ')';
-            $types[$schedule->id] = $label;
-        }
-        
-        return $types;
+        return app(PeriodService::class)->getAvailableScheduleTypes($this->selectedPeriod);
     }
 };
 
 ?>
 
-<div>
-    <section class="w-full">
-        <div class="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-700 rounded-lg shadow-xl mb-10 p-6 sm:p-8">
-            <div class="mb-6">
-                <h1 class="text-3xl text-black dark:text-white font-bold">My Availability</h1>
-                <p class="text-zinc-600 dark:text-zinc-400 mt-1">Set your availability for proposal hearings and thesis defenses.</p>
+<div class="p-2 sm:p-4 lg:p-8">
+    <div class="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-700 rounded-lg shadow-xl flex flex-col w-full h-full lg:max-w-7xl lg:mx-auto" style="height: 90vh;">
+        <div class="p-3 sm:p-4 md:p-6 flex flex-col flex-1 overflow-hidden">
+            <div class="mb-4">
+                <h1 class="text-2xl text-black dark:text-white font-bold">My Availability</h1>
+                <p class="text-zinc-600 dark:text-zinc-400 text-sm mt-1">Set your availability for proposal hearings and thesis defenses.</p>
             </div>
 
-            <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
                 <div>
                     <label class="block text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-2">Select Period</label>
                     <select wire:model.live="selectedPeriod" class="w-full px-4 py-2 rounded-lg border border-zinc-300 dark:border-zinc-600 bg-white dark:bg-zinc-800 text-black dark:text-white">
@@ -212,7 +161,7 @@ class extends Component {
                 @endif
             </div>
 
-            <div wire:key="schedule-{{ $selectedType }}" x-data="{ 
+            <div wire:key="schedule-{{ $selectedType }}" class="flex-1 flex flex-col" style="min-height: 0;" x-data="{ 
                 availability: @js($availability),
                 lockedSlots: @js($lockedSlots),
                 hasChanges: false,
@@ -227,16 +176,15 @@ class extends Component {
                 }
             }">
             @if($selectedPeriod && count($dates) > 0)
-                <div class="overflow-x-auto"> 
-
+                <div class="flex-1 overflow-auto" style="min-height: 0;">
                     <div class="inline-block min-w-full align-middle">
-                        <div class="overflow-hidden border border-zinc-200 dark:border-zinc-700 rounded-lg">
+                        <div class="border border-zinc-200 dark:border-zinc-700 rounded-lg">
                             <table class="min-w-full divide-y divide-zinc-200 dark:divide-zinc-700">
-                                <thead class="bg-zinc-50 dark:bg-zinc-800">
+                                <thead class="bg-zinc-50 dark:bg-zinc-800 sticky top-0 z-10">
                                     <tr>
-                                        <th class="sticky left-0 z-10 bg-zinc-50 dark:bg-zinc-800 px-4 py-3 text-left text-xs font-medium text-zinc-500 dark:text-zinc-300 uppercase">Time</th>
+                                        <th class="sticky left-0 z-10 bg-zinc-50 dark:bg-zinc-800 px-3 py-2 text-left text-xs font-medium text-zinc-500 dark:text-zinc-300 uppercase">Time</th>
                                         @foreach($dates as $date)
-                                            <th class="px-4 py-3 text-center text-xs font-medium text-zinc-500 dark:text-zinc-300 uppercase whitespace-nowrap">
+                                            <th class="px-3 py-2 text-center text-xs font-medium text-zinc-500 dark:text-zinc-300 uppercase whitespace-nowrap">
                                                 {{ Carbon::parse($date)->format('D') }}<br>
                                                 {{ Carbon::parse($date)->format('d M') }}
                                             </th>
@@ -246,7 +194,7 @@ class extends Component {
                                 <tbody class="bg-white dark:bg-zinc-900 divide-y divide-zinc-200 dark:divide-zinc-700">
                                     @foreach($timeSlots as $time)
                                         <tr>
-                                            <td class="sticky left-0 z-10 bg-white dark:bg-zinc-900 px-4 py-2 text-sm font-medium text-zinc-900 dark:text-white whitespace-nowrap border-r border-zinc-200 dark:border-zinc-700">
+                                            <td class="sticky left-0 z-0 bg-white dark:bg-zinc-900 px-3 py-1 text-xs font-medium text-zinc-900 dark:text-white whitespace-nowrap border-r border-zinc-200 dark:border-zinc-700">
                                                 {{ $time }}
                                             </td>
                                             @foreach($dates as $date)
@@ -254,14 +202,14 @@ class extends Component {
                                                     $key = $date . '_' . $time;
                                                     $isBreak = str_contains($time, 'Break');
                                                 @endphp
-                                                <td class="px-2 py-2">
+                                                <td class="px-1 py-1">
                                                     @if($isBreak)
-                                                        <div class="w-full h-12 rounded bg-zinc-300 dark:bg-zinc-700" title="Break Time"></div>
+                                                        <div class="w-full h-8 rounded bg-zinc-300 dark:bg-zinc-700" title="Break Time"></div>
                                                     @else
                                                         <div 
                                                             @click="toggleSlot('{{ $key }}')"
                                                             :class="lockedSlots['{{ $key }}'] ? 'bg-yellow-500' : (availability['{{ $key }}'] ? 'bg-green-500 hover:bg-green-600 cursor-pointer' : 'bg-red-500 hover:bg-red-600 cursor-pointer')"
-                                                            class="w-full h-12 rounded flex items-center justify-center text-xs text-white font-medium px-1"
+                                                            class="w-full h-8 rounded flex items-center justify-center text-xs text-white font-medium px-1"
                                                             :title="lockedSlots['{{ $key }}'] ? 'Locked: ' + lockedSlots['{{ $key }}'].join(', ') : (availability['{{ $key }}'] ? 'Available' : 'Busy')">
                                                             <span x-show="lockedSlots['{{ $key }}']" x-text="lockedSlots['{{ $key }}'] ? lockedSlots['{{ $key }}'].length + ' student(s)' : ''"></span>
                                                         </div>
@@ -276,18 +224,18 @@ class extends Component {
                     </div>
                 </div>
 
-                <div class="mt-4 flex items-center justify-between">
-                    <div class="flex items-center gap-6 text-sm">
+                <div class="mt-3 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 flex-shrink-0">
+                    <div class="flex items-center gap-4 text-xs">
                         <div class="flex items-center gap-2">
-                            <div class="w-6 h-6 bg-green-500 rounded"></div>
+                            <div class="w-5 h-5 bg-green-500 rounded"></div>
                             <span class="text-zinc-600 dark:text-zinc-400">Available</span>
                         </div>
                         <div class="flex items-center gap-2">
-                            <div class="w-6 h-6 bg-red-500 rounded"></div>
+                            <div class="w-5 h-5 bg-red-500 rounded"></div>
                             <span class="text-zinc-600 dark:text-zinc-400">Busy</span>
                         </div>
                         <div class="flex items-center gap-2">
-                            <div class="w-6 h-6 bg-yellow-500 rounded"></div>
+                            <div class="w-5 h-5 bg-yellow-500 rounded"></div>
                             <span class="text-zinc-600 dark:text-zinc-400">Locked (Assigned)</span>
                         </div>
                     </div>

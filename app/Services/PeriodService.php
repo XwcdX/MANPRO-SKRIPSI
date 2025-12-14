@@ -148,4 +148,46 @@ class PeriodService
 
         return true;
     }
+
+    /**
+     * Get available schedule types for a period.
+     * 
+     * @param string $periodId Period UUID
+     * @return array Array with schedule IDs as keys and labels as values
+     */
+    public function getAvailableScheduleTypes(string $periodId): array
+    {
+        $period = $this->findPeriod($periodId);
+        if (!$period) {
+            return [];
+        }
+
+        $types = [];
+        
+        $proposalSchedules = $period->schedules()
+            ->where('type', 'proposal_hearing')
+            ->orderBy('start_date')
+            ->get();
+        
+        $thesisSchedules = $period->schedules()
+            ->where('type', 'thesis_defense')
+            ->orderBy('start_date')
+            ->get();
+        
+        foreach ($proposalSchedules as $index => $schedule) {
+            $label = 'Proposal Hearing ' . ($index + 1) . ' (' . 
+                    Carbon::parse($schedule->start_date)->format('d M') . ' - ' . 
+                    Carbon::parse($schedule->end_date)->format('d M') . ')';
+            $types[$schedule->id] = $label;
+        }
+        
+        foreach ($thesisSchedules as $index => $schedule) {
+            $label = 'Thesis Defense ' . ($index + 1) . ' (' . 
+                    Carbon::parse($schedule->start_date)->format('d M') . ' - ' . 
+                    Carbon::parse($schedule->end_date)->format('d M') . ')';
+            $types[$schedule->id] = $label;
+        }
+        
+        return $types;
+    }
 }

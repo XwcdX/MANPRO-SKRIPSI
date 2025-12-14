@@ -182,15 +182,6 @@ class PresentationService
             ->toArray();
     }
     
-    /**
-     * Check for existing presentation at same venue, date, and time.
-     * 
-     * @param string $venueId Venue UUID
-     * @param string $date Presentation date
-     * @param string $startTime Start time
-     * @param string $endTime End time
-     * @return array|null Existing presentation info or null
-     */
     public function getValidCombinations(string $periodScheduleId, array $studentIds, ?string $excludePresentationId = null): array
     {
         if (empty($studentIds)) {
@@ -284,5 +275,71 @@ class PresentationService
         }
 
         return $combinations;
+    }
+
+    /**
+     * Get presentations for a lecturer (as examiner or supervisor).
+     * 
+     * @param string $lecturerId Lecturer UUID
+     * @return array Array of presentation data
+     */
+    public function getLecturerPresentations(string $lecturerId): array
+    {
+        return ThesisPresentation::with(['student', 'venue', 'periodSchedule.period', 'examiners.lecturer', 'leadExaminer.lecturer'])
+            ->where(function($q) use ($lecturerId) {
+                $q->whereHas('examiners', fn($q) => $q->where('lecturer_id', $lecturerId))
+                  ->orWhereHas('student.supervisors', fn($q) => $q->where('lecturer_id', $lecturerId));
+            })
+            ->orderBy('presentation_date', 'asc')
+            ->orderBy('start_time', 'asc')
+            ->get()
+            ->toArray();
+    }
+
+    /**
+     * Submit presentation decision (pass/fail).
+     * 
+     * @param string $presentationId Presentation UUID
+     * @param string $decision 'pass' or 'fail'
+     * @param string|null $notes Optional notes
+     * @return bool Success status
+     */
+    public function submitDecision(string $presentationId, string $decision, ?string $notes = null): bool
+    {
+        return DB::transaction(function () use ($presentationId, $decision, $notes) {
+            $presentation = ThesisPresentation::with(['student', 'periodSchedule'])->find($presentationId);
+            if (!$presentation) return false;
+
+            $student = $presentation->student;
+            $oldStatus = $student->status;
+            
+            if ($decision === 'pass') {
+                $newStatus = 4;
+                $student->update(['status' => $newStatus]);
+            } else {
+                $newStatus = 2;
+                $scheduleType = $presentation->periodSchedule->type;
+                $updateData = ['status' => $newStatus];
+                
+                if ($scheduleType === 'proposal_hearing') {
+                    $updateData['proposal_schedule_id'] = null;
+                } else {
+                    $updateData['thesis_schedule_id'] = null;
+                }
+                
+                $student->update($updateData);
+            }
+
+            \App\Models\StudentStatusHistory::create([
+                'student_id' => $student->id,
+                'period_id' => $presentation->periodSchedule->period_id,
+                'previous_status' => $oldStatus,
+                'new_status' => $newStatus,
+                'changed_by' => auth()->id(),
+                'reason' => $notes ?: ($decision === 'pass' ? 'Passed presentation' : 'Failed presentation'),
+            ]);
+
+            return true;
+        });
     }
 }

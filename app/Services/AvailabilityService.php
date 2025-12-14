@@ -274,4 +274,36 @@ class AvailabilityService
             ->orderBy('start_date', 'desc')
             ->get();
     }
+
+    /**
+     * Get locked time slots for a lecturer (presentations where they're examiner or supervisor).
+     * 
+     * @param string $lecturerId Lecturer UUID
+     * @param string $periodScheduleId Period schedule UUID
+     * @return array Array with slot keys and student names
+     */
+    public function getLockedSlots(string $lecturerId, string $periodScheduleId): array
+    {
+        $presentations = \App\Models\ThesisPresentation::where('period_schedule_id', $periodScheduleId)
+            ->where(function($q) use ($lecturerId) {
+                $q->whereHas('examiners', fn($q) => $q->where('lecturer_id', $lecturerId))
+                  ->orWhereHas('student.supervisors', fn($q) => $q->where('lecturer_id', $lecturerId));
+            })
+            ->with('student')
+            ->get();
+
+        $locked = [];
+        foreach ($presentations as $p) {
+            $date = Carbon::parse($p->presentation_date)->format('Y-m-d');
+            $timeSlot = substr($p->start_time, 0, 5) . '-' . substr($p->end_time, 0, 5);
+            $key = $date . '_' . $timeSlot;
+            
+            if (!isset($locked[$key])) {
+                $locked[$key] = [];
+            }
+            $locked[$key][] = $p->student->name;
+        }
+        
+        return $locked;
+    }
 }
