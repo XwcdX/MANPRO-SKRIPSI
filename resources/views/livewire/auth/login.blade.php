@@ -130,14 +130,14 @@ new #[Layout('components.layouts.auth')] class extends Component {
 
                     {{-- Tombol Login --}}
                     <button type="submit"
-                        class="w-full bg-gray-700 text-white font-medium py-3 px-4 rounded-lg hover:bg-gray-800 transition-colors duration-300">
+                        class="w-full bg-gray-700 text-white font-medium py-3 px-4 rounded-lg hover:bg-gray-800 transition-colors duration-300 cursor-pointer">
                         <span wire:loading.remove>LOG IN</span>
                         <span wire:loading>Processing...</span>
                     </button>
 
                     <a href="{{ route('google.redirect') }}"
                     class="w-full flex items-center justify-center gap-2 border border-gray-300 py-3 px-4 rounded-lg hover:bg-gray-100 transition-colors duration-300">
-                        <img src="" alt="google" class="w-5 h-5">
+                        <img src="{{ asset('assets/logo/google.svg') }}" alt="Google" class="w-5 h-5">
                         Login with Google
                     </a>
 
