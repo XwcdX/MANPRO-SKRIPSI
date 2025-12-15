@@ -67,7 +67,7 @@ new #[Layout('components.layouts.lecturer')] class extends Component {
 
     public function viewPdf($filePath): void
     {
-        $this->pdfUrl = Storage::url($filePath);
+        $this->pdfUrl = url(Storage::url($filePath));
         $this->showPdfModal = true;
     }
 
