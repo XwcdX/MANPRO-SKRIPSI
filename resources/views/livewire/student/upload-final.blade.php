@@ -27,11 +27,11 @@ new class extends Component {
         $this->user->refresh();
 
         if ($this->type === 'proposal' && $this->user->final_proposal_path) {
-            $this->existing_file_url = Storage::url($this->user->final_proposal_path);
+            $this->existing_file_url = url(Storage::url($this->user->final_proposal_path));
         }
 
         if ($this->type === 'thesis' && $this->user->final_thesis_path) {
-            $this->existing_file_url = Storage::url($this->user->final_thesis_path);
+            $this->existing_file_url = url(Storage::url($this->user->final_thesis_path));
         }
     }
 
