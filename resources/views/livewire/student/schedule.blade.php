@@ -60,7 +60,7 @@ new class extends Component {
             $this->selectedSchedule = PeriodSchedule::find($this->selectedScheduleId);
 
             if ($this->selectedSchedule) {
-                $deadline = \Carbon\Carbon::parse($this->selectedSchedule->start_date)->subWeek();
+                $deadline = \Carbon\Carbon::parse($this->selectedSchedule->deadline);
 
                 if (now()->greaterThan($deadline)) {
                     $this->loadPresentationDetail();
