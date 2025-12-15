@@ -81,7 +81,7 @@ new class extends Component {
         $this->user->load([
             $relation => fn ($q) => $q
                 ->when($this->user->$column, fn($query) =>
-                    $query->where('period_schedule_id', $this->user->$column)
+                    $query->where('id', $this->user->$column)
                 )
                 ->with(['venue'])
         ]);
