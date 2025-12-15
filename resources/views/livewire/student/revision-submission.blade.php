@@ -201,7 +201,7 @@ new class extends Component {
                     <td class="px-6 py-4">{{ $h->created_at }}</td>
                     <td class="px-6 py-4">{{ $h->description }}</td>
                     <td class="px-6 py-4 whitespace-nowrap text-blue-600 hover:text-blue-800 cursor-pointer">
-                        <a href="{{ env('APP_URL') . Storage::url($h->file_path) }}" target="_blank" class="text-blue-600 hover:text-blue-800">
+                        <a href="{{ url(Storage::url($h->file_path)) }}" target="_blank" class="text-blue-600 hover:text-blue-800">
                             Lihat File
                         </a>
                     </td>
