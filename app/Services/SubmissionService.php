@@ -55,7 +55,8 @@ class SubmissionService
         $upload = $model::where('student_id', $student->id)->orderByDesc('created_at')->first();
 
         if($upload->status == 0){
-            throw new \InvalidArgumentException("Masih adad file upload dengan status pending");
+            // throw new \InvalidArgumentException("Masih adad file upload dengan status pending");
+            return false;
         }
 
         $path = $this->fileService->upload(
