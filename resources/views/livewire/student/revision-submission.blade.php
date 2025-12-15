@@ -91,17 +91,40 @@ new class extends Component {
             return;
         }
 
-        $success = $service->submitRevisionFile($this->user, $this->file, $this->description, $this->type);
-
-        if ($success) {
-            $this->dispatch('notify', type: 'success',
-                message: ucfirst($this->type).' berhasil disubmit.'
+        try {
+            $success = $service->submitRevisionFile(
+                $this->user,
+                $this->file,
+                $this->description,
+                $this->type
             );
 
-            $this->reset(['description', 'file']);
-        } else {
-            $this->dispatch('notify', type: 'error',
-                message: 'Gagal menyimpan '.$this->type
+            if ($success) {
+                $this->dispatch('notify',
+                    type: 'success',
+                    message: ucfirst($this->type).' berhasil disubmit.'
+                );
+
+                $this->reset(['description', 'file']);
+            } else {
+                $this->dispatch('notify',
+                    type: 'warning',
+                    message: 'Masih ada file '.$this->type.' dengan status pending'
+                );
+            }
+        } catch (\InvalidArgumentException $e) {
+            $this->dispatch('notify',
+                type: 'error',
+                message: $e->getMessage()
+            );
+        } catch (\Throwable $e) {
+            logger()->error('Submit revision error', [
+                'error' => $e->getMessage(),
+            ]);
+
+            $this->dispatch('notify',
+                type: 'error',
+                message: 'Terjadi kesalahan saat menyimpan data'
             );
         }
     }

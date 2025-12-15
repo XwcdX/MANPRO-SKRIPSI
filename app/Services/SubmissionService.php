@@ -33,8 +33,12 @@ class SubmissionService
      * @param UploadedFile $file
      * @param string $type thesis or proposal
      */
-    public function submitRevisionFile(Student $student, UploadedFile $file, string $description, string $type)
-    {
+    public function submitRevisionFile(
+        Student $student,
+        UploadedFile $file,
+        string $description,
+        string $type
+    ) {
         $config = [
             'proposal' => [
                 'folder' => 'proposal',
@@ -47,15 +51,16 @@ class SubmissionService
         ];
 
         if (! isset($config[$type])) {
-            throw new \InvalidArgumentException("Tipe submission tidak valid: {$type}");
+            throw new \InvalidArgumentException("Tipe submission tidak valid");
         }
 
         $model = $config[$type]['model'];
 
-        $upload = $model::where('student_id', $student->id)->orderByDesc('created_at')->first();
+        $upload = $model::where('student_id', $student->id)
+            ->latest()
+            ->first();
 
-        if($upload->status == 0){
-            // throw new \InvalidArgumentException("Masih adad file upload dengan status pending");
+        if ($upload && $upload->status === 0) {
             return false;
         }
 
@@ -74,6 +79,7 @@ class SubmissionService
 
         return true;
     }
+
 
 
     /**
