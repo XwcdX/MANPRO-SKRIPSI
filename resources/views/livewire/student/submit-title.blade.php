@@ -8,8 +8,8 @@ use App\Services\SubmissionService;
 new class extends Component {
     use WithAuthUser;
 
-    public string $title = '';
-    public string $description = '';
+    public ?string $title = '';
+    public ?string $description = '';
     public ?int $status = null;
 
     public function mount()

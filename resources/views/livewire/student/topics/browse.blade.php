@@ -132,7 +132,12 @@ new class extends Component {
             return;
         }
 
-        TopicApplication::create([
+        TopicApplication::updateOrCreate(
+        [
+            'student_id' => auth()->id(),
+            'period_id' => $activePeriod->id,
+        ],
+        [
             'student_id' => auth()->id(),
             'topic_id' => $this->applying->id,
             'lecturer_id' => $this->applying->lecturer_id,
