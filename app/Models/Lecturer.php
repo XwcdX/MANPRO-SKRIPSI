@@ -76,15 +76,26 @@ class Lecturer extends Authenticatable implements MustVerifyEmail
 
 
 
-    public function isAtCapacity()
+    public function isAtCapacity(string $periodId)
     {
-        $maxStudents = (int) setting('max_students_per_supervisor', 12);
+        $maxStudents = $this->lecturerQuotas()
+        ->where('period_id', $periodId)
+        ->value('max_students');
+
+        // fallback kalau belum diset
+        $maxStudents ??= (int) setting('max_students_per_supervisor', 12);
+
         return $this->activeSupervisions()->count() >= $maxStudents;
     }
 
-    public function getAvailableCapacity()
+    public function getAvailableCapacity(string $periodId)
     {
-        $maxStudents = (int) setting('max_students_per_supervisor', 12);
+        $maxStudents = $this->lecturerQuotas()
+        ->where('period_id', $periodId)
+        ->value('max_students');
+
+        // fallback kalau belum diset
+        $maxStudents ??= (int) setting('max_students_per_supervisor', 12);
         $capacity = $maxStudents - $this->activeSupervisions()->count();
         return $capacity > 0 ? $capacity : 0;
     }

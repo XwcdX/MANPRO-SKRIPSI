@@ -287,6 +287,10 @@ class SubmissionService
                 throw new \Exception('Tidak ada periode aktif saat ini.');
             }
 
+            if ($lecturer->isAtCapacity($period->id)){
+                throw new \Exception('Kuota Dosen Telah Penuh.');
+            }
+
             $exists = SupervisionApplication::where('student_id', $student->id)
                 ->whereNot('lecturer_id', $lecturer->id)
                 ->where('proposed_role', $role)
