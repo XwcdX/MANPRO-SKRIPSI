@@ -162,7 +162,7 @@ new class extends Component {
             History {{ $this->title }}
         </h3>
 
-        <table class="w-full text-sm text-left text-gray-600 border">
+        <table class="w-full text-sm text-left text-gray-600 border overflow-x-auto">
             <thead class="bg-gray-100">
                 <tr>
                     <th class="px-6 py-3">Tanggal</th>

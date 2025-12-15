@@ -50,14 +50,20 @@ class SubmissionService
             throw new \InvalidArgumentException("Tipe submission tidak valid: {$type}");
         }
 
+        $model = $config[$type]['model'];
+
+        $upload = $model::where('student_id', $student->id)->orderByDesc('created_at')->first();
+
+        if($upload->status == 0){
+            throw new \InvalidArgumentException("Masih adad file upload dengan status pending");
+        }
+
         $path = $this->fileService->upload(
             $file,
             $config[$type]['folder'],
             $student,
             'public'
         );
-
-        $model = $config[$type]['model'];
 
         $model::create([
             'student_id' => $student->id,
