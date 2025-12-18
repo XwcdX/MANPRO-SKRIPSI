@@ -51,8 +51,17 @@ new class extends Component {
         }
 
         $query = LecturerTopic::with(['lecturer.divisions'])
-            ->where('is_available', true)
-            ->where('student_quota', '>', 0);
+            ->where('lecturer_topics.is_available', true)
+            ->where('lecturer_topics.student_quota', '>', 0)
+            ->leftJoin('topic_applications as ta', function ($join) use ($student, $activePeriod) {
+                $join->on('lecturer_topics.id', '=', 'ta.topic_id')
+                    ->where('ta.student_id', $student->id)
+                    ->where('ta.period_id', $activePeriod->id);
+            })
+            ->select(
+                'lecturer_topics.*',
+                'ta.status as application_status'
+            );
 
         if ($this->search) {
             $query->where(function($q) {
@@ -220,9 +229,12 @@ new class extends Component {
                                     <strong>Capacity:</strong> {{ $topic->student_quota }} student(s)
                                 </span>
                             </div>
+                            @if($topic->application_status && $topic->application_status == 'declined')
+                                <p class="text-red-500 mt-3">{{ ucfirst($topic->application_status) }}</p>
+                            @endif
                         </div>
                         <div class="ml-4">
-                            @if($hasSupervisor || $existingApplication)
+                            @if($hasSupervisor || $existingApplication || ($topic->application_status && $topic->application_status == 'declined'))
                                 <button disabled class="px-4 py-2 bg-gray-300 text-gray-500 rounded-lg cursor-not-allowed">
                                     Apply
                                 </button>
