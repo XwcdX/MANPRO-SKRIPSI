@@ -35,16 +35,21 @@ new class extends Component {
             'supervisionApplications' => fn ($q) => $q->where('period_id', $this->user->activePeriod()->id)->whereNot('status', 'declined')->whereNot('status', 'canceled'),
             'supervisors'
         ]);
+
+        $dosenAcc1 = null;
+        $dosenAcc2 = null;
         // 1. Ambil dosbing resmi dulu dari pivot
         foreach ($this->user->supervisors as $lecturer) {
             if ($lecturer->pivot->role == 0) {
                 $this->dosbing1 = $lecturer->id;
                 $this->status1 = 'accepted';
+                $dosenAcc1 = $lecturer;
             }
 
             if ($lecturer->pivot->role == 1) {
                 $this->dosbing2 = $lecturer->id;
                 $this->status2 = 'accepted';
+                $dosenAcc2 = $lecturer;
             }
         }
 
@@ -63,14 +68,73 @@ new class extends Component {
             }
         }
         $this->status = $user->status ?? 0;
-        $raw = Lecturer::with('divisions')->get();
 
-        $this->lecturers1 = $raw->filter(fn ($lecturer) => $lecturer->hasPermissionTo('offer-topics'))->mapWithKeys(fn ($lecturer) => [
-            $lecturer->id => $lecturer->name . ($lecturer->divisions->isNotEmpty() ? ' (' . $lecturer->divisions->pluck('name')->implode(', ') . ')' : '')
-        ])->toArray();
-        $this->lecturers2 = $raw->mapWithKeys(fn ($lecturer) => [
-            $lecturer->id => $lecturer->name . ($lecturer->divisions->isNotEmpty() ? ' (' . $lecturer->divisions->pluck('name')->implode(', ') . ')' : '')
-        ])->toArray();
+        $periodId = $this->user->activePeriod()->id;
+        $permissionName = 'offer-topics';
+
+        // ambil semua lecturer yang punya permission 'offer-topics'
+        $lecturersWithPermission = \DB::table('model_has_permissions as mhp')
+            ->join('permissions as p', 'p.id', '=', 'mhp.permission_id')
+            ->where('mhp.model_type', 'like', '%Lecturer%')
+            ->where('p.name', $permissionName)
+            ->pluck('mhp.model_id')
+            ->toArray();
+
+        $raw = \DB::table('lecturers as l')
+            ->leftJoin('lecturer_period_quotas as lpq', function ($join) use ($periodId) {
+                $join->on('lpq.lecturer_id', '=', 'l.id')
+                    ->where('lpq.period_id', $periodId);
+            })
+            ->leftJoin('student_lecturers as sl', function ($join) use ($periodId) {
+                $join->on('sl.lecturer_id', '=', 'l.id')
+                    ->whereIn('sl.role', [0, 1])
+                    ->where('sl.status', 'active');
+            })
+            ->leftJoin('student_periods as ps', function ($join) use ($periodId) {
+                $join->on('ps.student_id', '=', 'sl.student_id')
+                    ->where('ps.period_id', $periodId);
+            })
+            ->leftJoin('division_lecturer as dl', 'dl.lecturer_id', '=', 'l.id')
+            ->leftJoin('divisions as d', 'd.id', '=', 'dl.division_id')
+            ->select(
+                'l.id',
+                'l.name',
+                \DB::raw('GROUP_CONCAT(DISTINCT d.name) as divisions'),
+                \DB::raw('COUNT(DISTINCT ps.student_id) as current_students'),
+                'lpq.max_students'
+            )
+            ->whereIn('l.id', $lecturersWithPermission) // filter permission
+            ->groupBy('l.id', 'l.name', 'lpq.max_students')
+            ->havingRaw('COUNT(DISTINCT ps.student_id) < lpq.max_students')
+            ->get();
+
+
+        $this->lecturers1 = $raw
+            ->mapWithKeys(fn($lecturer) => [
+                $lecturer->id => $lecturer->name
+                    . ($lecturer->divisions ? ' (' . $lecturer->divisions . ')' : '')
+            ])
+            ->toArray();
+
+        $this->lecturers2 = $raw
+            ->mapWithKeys(fn($lecturer) => [
+                $lecturer->id => $lecturer->name
+                    . ($lecturer->divisions ? ' (' . $lecturer->divisions . ')' : '')
+            ])
+            ->toArray();
+
+        if($dosenAcc1){
+            if(!array_key_exists($dosenAcc1->id, $this->lecturers1)){
+                $this->lecturers1[$dosenAcc1->id] = $dosenAcc1->name;
+            }
+        }
+        else if($dosenAcc2){
+            if(!array_key_exists($dosenAcc2->id, $this->lecturers2)){
+                $this->lecturers2[$dosenAcc2->id] = $dosenAcc2->name;
+            }
+        }
+
+
     }
 
     public function submit($dosbing, SubmissionService $service)

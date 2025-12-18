@@ -82,9 +82,6 @@ class Lecturer extends Authenticatable implements MustVerifyEmail
         ->where('period_id', $periodId)
         ->value('max_students');
 
-        // fallback kalau belum diset
-        $maxStudents ??= (int) setting('max_students_per_supervisor', 12);
-
         return $this->activeSupervisions()->count() >= $maxStudents;
     }
 
@@ -94,8 +91,6 @@ class Lecturer extends Authenticatable implements MustVerifyEmail
         ->where('period_id', $periodId)
         ->value('max_students');
 
-        // fallback kalau belum diset
-        $maxStudents ??= (int) setting('max_students_per_supervisor', 12);
         $capacity = $maxStudents - $this->activeSupervisions()->count();
         return $capacity > 0 ? $capacity : 0;
     }
