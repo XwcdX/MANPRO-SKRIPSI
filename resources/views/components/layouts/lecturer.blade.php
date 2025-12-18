@@ -27,9 +27,6 @@
                     <flux:navlist.item icon="light-bulb" :href="route('lecturer.topics.index')"
                         :current="request()->routeIs('lecturer.topics.index')" wire:navigate>{{ __('My Topics') }}
                     </flux:navlist.item>
-                    <flux:navlist.item icon="inbox-stack" :href="route('lecturer.topic-applications.index')"
-                        :current="request()->routeIs('lecturer.topic-applications.*')" wire:navigate>{{ __('Topic Applications') }}
-                    </flux:navlist.item>
                 </flux:navlist.group>
             @endcan
 

@@ -15,7 +15,7 @@ return new class extends Migration {
             $table->foreignUuid('period_id')->constrained('periods')->onDelete('cascade');
             $table->text('student_notes')->nullable();
             $table->text('lecturer_notes')->nullable();
-            $table->enum('status', ['pending', 'accepted', 'declined'])->default('pending');
+            $table->enum('status', ['pending', 'accepted', 'declined', 'quota_full'])->default('pending');
             $table->timestamps();
             
             $table->unique(['student_id', 'period_id']);

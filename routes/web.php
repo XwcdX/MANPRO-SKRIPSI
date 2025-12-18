@@ -49,7 +49,6 @@ Route::prefix('lecturer')->name('lecturer.')->middleware(['auth:lecturer', 'veri
     
     Route::middleware('permission:offer-topics,lecturer')->group(function () {
         Volt::route('topics', 'lecturer.topics.index')->name('topics.index');
-        Volt::route('topic-applications', 'lecturer.topic-applications.index')->name('topic-applications.index');
     });
 
     Volt::route('schedules/availability', 'lecturer.schedules.availability')->name('schedules.availability');
@@ -60,7 +59,7 @@ Route::prefix('lecturer')->name('lecturer.')->middleware(['auth:lecturer', 'veri
         Volt::route('topics/all', 'lecturer.topics.all-topics')->name('topics.all');
     });
 
-    Volt::route('applications', 'lecturer.applications.index')->name('applications.index');
+    Volt::route('applications', 'lecturer.applications-combined.index')->name('applications.index');
     Volt::route('students', 'lecturer.students.index')->name('students.index');
     Volt::route('my-students', 'lecturer.my-students.index')->name('my-students.index');
     Volt::route('division-students', 'lecturer.division-students.index')->name('division-students.index')->middleware('division_head');

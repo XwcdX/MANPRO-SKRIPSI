@@ -2,8 +2,8 @@
 
 namespace App\Services;
 
+use App\Models\Lecturer;
 use App\Models\SupervisionApplication;
-use App\Models\Student;
 use App\Models\StudentStatusHistory;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
@@ -15,6 +15,12 @@ class SupervisionApplicationService
         return DB::transaction(function () use ($applicationId, $lecturerId) {
             $application = SupervisionApplication::with('division')->findOrFail($applicationId);
             $student = $application->student;
+            $lecturer = Lecturer::findOrFail($lecturerId);
+            
+            $availableCapacity = $lecturer->getAvailableCapacityForPeriod($application->period_id);
+            if ($availableCapacity <= 0) {
+                throw new \Exception('You have reached your maximum student capacity for this period.');
+            }
             
             $application->update(['status' => 'accepted']);
 
@@ -66,10 +72,10 @@ class SupervisionApplicationService
         return true;
     }
 
-    public function getApplicationsForLecturer(string $lecturerId, string $status, ?string $search = null)
+    public function getApplicationsForLecturer(string $lecturerId, ?string $status, ?string $search = null)
     {
         return SupervisionApplication::where('lecturer_id', $lecturerId)
-            ->where('status', $status)
+            ->when($status, fn($q) => $q->where('status', $status))
             ->when($search, function ($query) use ($search) {
                 $query->whereHas('student', function ($q) use ($search) {
                     $q->where('name', 'like', '%' . $search . '%')

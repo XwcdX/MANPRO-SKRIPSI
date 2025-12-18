@@ -7,11 +7,9 @@ use App\Services\ProposalService;
 use Illuminate\Support\Facades\Storage;
 
 new #[Layout('components.layouts.lecturer')] class extends Component {
-    public $activeTab = 'supervisor1';
     public $selectedPeriod = null;
     public $activePeriods = [];
-    public $supervisor1Students = [];
-    public $supervisor2Students = [];
+    public $students = [];
     public $showPdfModal = false;
     public $pdfUrl = '';
     public $showDetailModal = false;
@@ -51,13 +49,17 @@ new #[Layout('components.layouts.lecturer')] class extends Component {
     {
         $lecturerId = auth()->id();
         
-        $this->supervisor1Students = $this->studentService->getSupervisor1Students($lecturerId, $this->selectedPeriod);
-        $this->supervisor2Students = $this->studentService->getSupervisor2Students($lecturerId, $this->selectedPeriod);
-    }
-
-    public function setActiveTab($tab): void
-    {
-        $this->activeTab = $tab;
+        $supervisor1 = $this->studentService->getSupervisor1Students($lecturerId, $this->selectedPeriod);
+        $supervisor2 = $this->studentService->getSupervisor2Students($lecturerId, $this->selectedPeriod);
+        
+        foreach ($supervisor1 as &$student) {
+            $student['supervisor_role'] = 'Supervisor 1';
+        }
+        foreach ($supervisor2 as &$student) {
+            $student['supervisor_role'] = 'Supervisor 2';
+        }
+        
+        $this->students = array_merge($supervisor1, $supervisor2);
     }
 
     public function updatedSelectedPeriod(): void
@@ -131,7 +133,7 @@ new #[Layout('components.layouts.lecturer')] class extends Component {
 
 <div class="space-y-6">
     <div class="flex justify-between items-center">
-        <h1 class="text-3xl font-bold text-zinc-900 dark:text-zinc-100">My Students</h1>
+        <h1 class="text-3xl font-bold text-zinc-900 dark:text-zinc-100">My Students ({{ is_array($students) ? count($students) : 0 }})</h1>
         
         <!-- Period Filter -->
         @if(count($activePeriods) > 0)
@@ -147,40 +149,14 @@ new #[Layout('components.layouts.lecturer')] class extends Component {
         @endif
     </div>
 
-    <!-- Tab Navigation -->
-    <div class="border-b border-zinc-200 dark:border-zinc-700">
-        <nav class="-mb-px flex space-x-8">
-            <button wire:click="setActiveTab('supervisor1')"
-                class="py-2 px-1 border-b-2 font-medium text-sm transition-colors
-                {{ $activeTab === 'supervisor1' 
-                    ? 'border-blue-500 text-blue-600 dark:text-blue-400' 
-                    : 'border-transparent text-zinc-500 hover:text-zinc-700 dark:text-zinc-400 dark:hover:text-zinc-300' }}">
-                Supervisor 1 Students ({{ count($supervisor1Students) }})
-            </button>
-            <button wire:click="setActiveTab('supervisor2')"
-                class="py-2 px-1 border-b-2 font-medium text-sm transition-colors
-                {{ $activeTab === 'supervisor2' 
-                    ? 'border-blue-500 text-blue-600 dark:text-blue-400' 
-                    : 'border-transparent text-zinc-500 hover:text-zinc-700 dark:text-zinc-400 dark:hover:text-zinc-300' }}">
-                Supervisor 2 Students ({{ count($supervisor2Students) }})
-            </button>
-        </nav>
-    </div>
-
-
-
     <!-- Students List -->
     <div class="space-y-4">
-        @php
-            $students = $activeTab === 'supervisor1' ? $supervisor1Students : $supervisor2Students;
-        @endphp
-
-        @if(count($students) === 0)
+        @if(!is_array($students) || count($students) === 0)
             <div class="text-center py-12">
                 <flux:icon.user-group class="mx-auto h-12 w-12 text-zinc-400" />
                 <h3 class="mt-2 text-sm font-medium text-zinc-900 dark:text-zinc-100">No students found</h3>
                 <p class="mt-1 text-sm text-zinc-500 dark:text-zinc-400">
-                    You don't have any students as {{ $activeTab === 'supervisor1' ? 'Supervisor 1' : 'Supervisor 2' }} yet.
+                    You don't have any students yet.
                 </p>
             </div>
         @else
@@ -250,10 +226,10 @@ new #[Layout('components.layouts.lecturer')] class extends Component {
                         <!-- Role Badge -->
                         <div class="flex-shrink-0 ml-4">
                             <span class="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium
-                                {{ $activeTab === 'supervisor1' 
+                                {{ $student['supervisor_role'] === 'Supervisor 1' 
                                     ? 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200' 
                                     : 'bg-zinc-100 text-zinc-800 dark:bg-zinc-700 dark:text-zinc-200' }}">
-                                {{ $activeTab === 'supervisor1' ? 'Supervisor 1' : 'Supervisor 2' }}
+                                {{ $student['supervisor_role'] }}
                             </span>
                         </div>
                     </div>
@@ -293,7 +269,7 @@ new #[Layout('components.layouts.lecturer')] class extends Component {
                                     @if($thesis['file_path'])
                                         <flux:button wire:click="viewPdf('{{ $thesis['file_path'] }}')" size="sm" variant="ghost" class="cursor-pointer">View PDF</flux:button>
                                     @endif
-                                    @if($thesis['status'] == 0 && $activeTab === 'supervisor1')
+                                    @if($thesis['status'] == 0 && $selectedStudent['supervisor_role'] === 'Supervisor 1')
                                         <flux:button wire:click="confirmAccept('{{ $thesis['id'] }}', 'thesis')" size="sm" variant="primary" class="cursor-pointer">Accept</flux:button>
                                         <flux:button wire:click="confirmDecline('{{ $thesis['id'] }}', 'thesis')" size="sm" variant="danger" class="cursor-pointer">Decline</flux:button>
                                     @endif
@@ -324,7 +300,7 @@ new #[Layout('components.layouts.lecturer')] class extends Component {
                                     @if($proposal['file_path'])
                                         <flux:button wire:click="viewPdf('{{ $proposal['file_path'] }}')" size="sm" variant="ghost" class="cursor-pointer">View PDF</flux:button>
                                     @endif
-                                    @if($proposal['status'] == 0 && $activeTab === 'supervisor1')
+                                    @if($proposal['status'] == 0 && $selectedStudent['supervisor_role'] === 'Supervisor 1')
                                         <flux:button wire:click="confirmAccept('{{ $proposal['id'] }}', 'proposal', '{{ $selectedStudent['division_id'] ?? null }}')" size="sm" variant="primary" class="cursor-pointer">Accept</flux:button>
                                         <flux:button wire:click="confirmDecline('{{ $proposal['id'] }}', 'proposal')" size="sm" variant="danger" class="cursor-pointer">Decline</flux:button>
                                     @endif
