@@ -48,8 +48,7 @@ class PeriodService
             
             $period->update($data);
             
-            $period->schedules()->delete();
-            $this->createSchedules($period, $data);
+            $this->updateSchedules($period, $data);
             
             return $period;
         });
@@ -107,6 +106,57 @@ class PeriodService
                 ]);
             }
         }
+    }
+    
+    private function updateSchedules(Period $period, array $data): void
+    {
+        $existingIds = [];
+        
+        if (!empty($data['proposal_schedules'])) {
+            foreach ($data['proposal_schedules'] as $schedule) {
+                if (!empty($schedule['id'])) {
+                    PeriodSchedule::where('id', $schedule['id'])->update([
+                        'start_date' => $schedule['start_date'],
+                        'end_date' => $schedule['end_date'],
+                        'deadline' => $schedule['deadline'],
+                    ]);
+                    $existingIds[] = $schedule['id'];
+                } else {
+                    $newSchedule = PeriodSchedule::create([
+                        'period_id' => $period->id,
+                        'type' => 'proposal_hearing',
+                        'start_date' => $schedule['start_date'],
+                        'end_date' => $schedule['end_date'],
+                        'deadline' => $schedule['deadline'],
+                    ]);
+                    $existingIds[] = $newSchedule->id;
+                }
+            }
+        }
+        
+        if (!empty($data['thesis_schedules'])) {
+            foreach ($data['thesis_schedules'] as $schedule) {
+                if (!empty($schedule['id'])) {
+                    PeriodSchedule::where('id', $schedule['id'])->update([
+                        'start_date' => $schedule['start_date'],
+                        'end_date' => $schedule['end_date'],
+                        'deadline' => $schedule['deadline'],
+                    ]);
+                    $existingIds[] = $schedule['id'];
+                } else {
+                    $newSchedule = PeriodSchedule::create([
+                        'period_id' => $period->id,
+                        'type' => 'thesis_defense',
+                        'start_date' => $schedule['start_date'],
+                        'end_date' => $schedule['end_date'],
+                        'deadline' => $schedule['deadline'],
+                    ]);
+                    $existingIds[] = $newSchedule->id;
+                }
+            }
+        }
+        
+        $period->schedules()->whereNotIn('id', $existingIds)->delete();
     }
 
     public function deletePeriod(string $periodId): bool
