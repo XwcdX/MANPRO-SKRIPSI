@@ -416,11 +416,11 @@ $checkDateCollision = function ($startDate, $endDate, $excludeIndex = null, $exc
                 </flux:heading>
 
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-4" x-data="{ errors: @js($errors->any()) }">
-                    <flux:input wire:model.live="start_date" type="date" label="Period Start Date" required />
+                    <x-date-input wire-model="start_date" label="Period Start Date" required />
                     @if(empty($start_date))
-                        <flux:input type="date" label="Period End Date" required disabled />
+                        <x-date-input wire-model="end_date" label="Period End Date" required disabled />
                     @else
-                        <flux:input wire:model.live="end_date" type="date" label="Period End Date" required min="{{ $start_date }}" />
+                        <x-date-input wire-model="end_date" label="Period End Date" required :min="date('Y-m-d', strtotime($start_date . ' +1 day'))" />
                     @endif
                     
                     <flux:input wire:model="default_quota" type="number" label="Default Lecturer Quota" required placeholder="12" />
@@ -461,24 +461,21 @@ $checkDateCollision = function ($startDate, $endDate, $excludeIndex = null, $exc
                                 @endphp
                                 <div class="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-3 p-3 border border-zinc-200 dark:border-zinc-600 rounded-lg {{ $isOngoingOrPast ? 'bg-zinc-50 dark:bg-zinc-800/50' : '' }}">
                                     @if($isLast)
-                                        <flux:input wire:model.live="proposal_schedules.{{ $index }}.deadline" type="date" label="Deadline" 
-                                            min="{{ $start_date }}" max="{{ $end_date }}" />
+                                        <x-date-input wire-model="proposal_schedules.{{ $index }}.deadline" label="Deadline" :min="$start_date" :max="$end_date" />
                                         @if(empty($schedule['deadline']))
-                                            <flux:input type="date" label="Start Date" disabled />
+                                            <x-date-input wire-model="proposal_schedules.{{ $index }}.start_date" label="Start Date" disabled />
                                         @else
-                                            <flux:input wire:model.live="proposal_schedules.{{ $index }}.start_date" type="date" label="Start Date" 
-                                                min="{{ $schedule['deadline'] }}" max="{{ $end_date }}" />
+                                            <x-date-input wire-model="proposal_schedules.{{ $index }}.start_date" label="Start Date" :min="$schedule['deadline']" :max="$end_date" />
                                         @endif
                                         @if(empty($schedule['start_date']))
-                                            <flux:input type="date" label="End Date" disabled />
+                                            <x-date-input wire-model="proposal_schedules.{{ $index }}.end_date" label="End Date" disabled />
                                         @else
-                                            <flux:input wire:model="proposal_schedules.{{ $index }}.end_date" type="date" label="End Date" 
-                                                min="{{ $schedule['start_date'] }}" max="{{ $end_date }}" />
+                                            <x-date-input wire-model="proposal_schedules.{{ $index }}.end_date" label="End Date" :min="date('Y-m-d', strtotime($schedule['start_date'] . ' +1 day'))" :max="$end_date" />
                                         @endif
                                     @else
-                                        <flux:input wire:model="proposal_schedules.{{ $index }}.deadline" type="date" label="Deadline" disabled />
-                                        <flux:input wire:model="proposal_schedules.{{ $index }}.start_date" type="date" label="Start Date" disabled />
-                                        <flux:input wire:model="proposal_schedules.{{ $index }}.end_date" type="date" label="End Date" disabled />
+                                        <x-date-input wire-model="proposal_schedules.{{ $index }}.deadline" label="Deadline" disabled />
+                                        <x-date-input wire-model="proposal_schedules.{{ $index }}.start_date" label="Start Date" disabled />
+                                        <x-date-input wire-model="proposal_schedules.{{ $index }}.end_date" label="End Date" disabled />
                                     @endif
                                     <div class="col-span-1 sm:col-span-3 flex justify-end">
                                         @if(!$isOngoingOrPast)
@@ -522,24 +519,21 @@ $checkDateCollision = function ($startDate, $endDate, $excludeIndex = null, $exc
                                 @endphp
                                 <div class="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-3 p-3 border border-zinc-200 dark:border-zinc-600 rounded-lg {{ $isOngoingOrPast ? 'bg-zinc-50 dark:bg-zinc-800/50' : '' }}">
                                     @if($isLast)
-                                        <flux:input wire:model.live="thesis_schedules.{{ $index }}.deadline" type="date" label="Deadline" 
-                                            min="{{ $start_date }}" max="{{ $end_date }}" />
+                                        <x-date-input wire-model="thesis_schedules.{{ $index }}.deadline" label="Deadline" :min="$start_date" :max="$end_date" />
                                         @if(empty($schedule['deadline']))
-                                            <flux:input type="date" label="Start Date" disabled />
+                                            <x-date-input wire-model="thesis_schedules.{{ $index }}.start_date" label="Start Date" disabled />
                                         @else
-                                            <flux:input wire:model.live="thesis_schedules.{{ $index }}.start_date" type="date" label="Start Date" 
-                                                min="{{ $schedule['deadline'] }}" max="{{ $end_date }}" />
+                                            <x-date-input wire-model="thesis_schedules.{{ $index }}.start_date" label="Start Date" :min="$schedule['deadline']" :max="$end_date" />
                                         @endif
                                         @if(empty($schedule['start_date']))
-                                            <flux:input type="date" label="End Date" disabled />
+                                            <x-date-input wire-model="thesis_schedules.{{ $index }}.end_date" label="End Date" disabled />
                                         @else
-                                            <flux:input wire:model="thesis_schedules.{{ $index }}.end_date" type="date" label="End Date" 
-                                                min="{{ $schedule['start_date'] }}" max="{{ $end_date }}" />
+                                            <x-date-input wire-model="thesis_schedules.{{ $index }}.end_date" label="End Date" :min="date('Y-m-d', strtotime($schedule['start_date'] . ' +1 day'))" :max="$end_date" />
                                         @endif
                                     @else
-                                        <flux:input wire:model="thesis_schedules.{{ $index }}.deadline" type="date" label="Deadline" disabled />
-                                        <flux:input wire:model="thesis_schedules.{{ $index }}.start_date" type="date" label="Start Date" disabled />
-                                        <flux:input wire:model="thesis_schedules.{{ $index }}.end_date" type="date" label="End Date" disabled />
+                                        <x-date-input wire-model="thesis_schedules.{{ $index }}.deadline" label="Deadline" disabled />
+                                        <x-date-input wire-model="thesis_schedules.{{ $index }}.start_date" label="Start Date" disabled />
+                                        <x-date-input wire-model="thesis_schedules.{{ $index }}.end_date" label="End Date" disabled />
                                     @endif
                                     <div class="col-span-1 sm:col-span-3 flex justify-end">
                                         @if(!$isOngoingOrPast)
