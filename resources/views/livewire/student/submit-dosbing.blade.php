@@ -87,7 +87,8 @@ new class extends Component {
                 $join->on('lpq.lecturer_id', '=', 'l.id')
                     ->where('lpq.period_id', $periodId);
             })
-            ->leftJoin('student_lecturers as sl', function ($join) use ($periodId) {
+            ->crossJoin('periods as p')
+            ->leftJoin('student_lecturers as sl', function ($join) {
                 $join->on('sl.lecturer_id', '=', 'l.id')
                     ->whereIn('sl.role', [0, 1])
                     ->where('sl.status', 'active');
@@ -103,11 +104,14 @@ new class extends Component {
                 'l.name',
                 \DB::raw('GROUP_CONCAT(DISTINCT d.name) as divisions'),
                 \DB::raw('COUNT(DISTINCT ps.student_id) as current_students'),
-                'lpq.max_students'
+                \DB::raw('COALESCE(lpq.max_students, p.default_quota) as max_students')
             )
-            ->whereIn('l.id', $lecturersWithPermission) // filter permission
-            ->groupBy('l.id', 'l.name', 'lpq.max_students')
-            ->havingRaw('COUNT(DISTINCT ps.student_id) < lpq.max_students')
+            ->where('p.id', $periodId)
+            ->whereIn('l.id', $lecturersWithPermission)
+            ->groupBy('l.id', 'l.name', 'lpq.max_students', 'p.default_quota')
+            ->havingRaw(
+                'COUNT(DISTINCT ps.student_id) < COALESCE(lpq.max_students, p.default_quota)'
+            )
             ->get();
 
 
