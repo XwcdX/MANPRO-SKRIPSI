@@ -73,11 +73,13 @@ new class extends Component {
         $permissionName = 'offer-topics';
 
         // ambil semua lecturer yang punya permission 'offer-topics'
-        $lecturersWithPermission = \DB::table('model_has_permissions as mhp')
-            ->join('permissions as p', 'p.id', '=', 'mhp.permission_id')
-            ->where('mhp.model_type', 'like', '%Lecturer%')
+        $lecturersWithPermission = \DB::table('model_has_roles as mhr')
+            ->join('role_has_permissions as rhp', 'rhp.role_id', '=', 'mhr.role_id')
+            ->join('permissions as p', 'p.id', '=', 'rhp.permission_id')
+            ->where('mhr.model_type', 'like', '%Lecturer%')
             ->where('p.name', $permissionName)
-            ->pluck('mhp.model_id')
+            ->pluck('mhr.model_id')
+            ->unique()
             ->toArray();
 
         $raw = \DB::table('lecturers as l')
