@@ -279,7 +279,7 @@ new class extends Component {
                         <label class="text-sm font-medium text-gray-700">Your Notes (Optional)</label>
                         <textarea wire:model="student_notes" rows="4"
                             placeholder="Explain your interest in this topic and why you're a good fit..."
-                            class="mt-1 block w-full rounded-lg border border-gray-300 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"></textarea>
+                            class="text-black mt-1 block w-full rounded-lg border border-gray-300 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"></textarea>
                         @error('student_notes')
                             <span class="text-red-500 text-xs mt-1">{{ $message }}</span>
                         @enderror
