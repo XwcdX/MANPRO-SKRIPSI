@@ -76,10 +76,28 @@ new class extends Component {
             return;
         }
 
-        $this->validate([
-            'description' => 'required|string',
-            'file' => 'required|file|mimes:pdf,doc,docx|max:2048',
-        ]);
+        $validator = Validator::make(
+            [
+                'description' => $this->description,
+                'file' => $this->file,
+            ],
+            [
+                'description' => 'required|string',
+                'file' => 'required|file|mimes:pdf,doc,docx|max:2048',
+            ]
+        );
+
+        if ($validator->fails()) {
+            $this->dispatch(
+                'notify',
+                type: 'error',
+                message: $validator->errors()->first()
+            );
+
+            $this->setErrorBag($validator->errors());
+
+            return;
+        }
 
         if (! $this->file instanceof UploadedFile) {
             $this->dispatch('notify', type: 'error', message: 'File tidak valid.');
