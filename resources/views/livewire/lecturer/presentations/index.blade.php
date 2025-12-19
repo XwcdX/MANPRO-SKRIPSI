@@ -225,6 +225,8 @@ new #[Layout('components.layouts.lecturer')] class extends Component {
                 ->whereHas('student', fn($q) => $q->where('status', 3))
                 ->count();
             $unscheduled = $totalStudents - $scheduledStudents;
+            
+            $deadlinePassed = Carbon::parse($schedule->deadline)->isPast();
 
             $result[] = [
                 'id' => $schedule->id,
@@ -232,6 +234,7 @@ new #[Layout('components.layouts.lecturer')] class extends Component {
                 'type' => $schedule->type,
                 'start_date' => $schedule->start_date,
                 'end_date' => $schedule->end_date,
+                'deadline_passed' => $deadlinePassed,
             ];
         }
 
@@ -379,7 +382,9 @@ new #[Layout('components.layouts.lecturer')] class extends Component {
                     <select wire:model.live="period_schedule_id" {{ !$period_id ? 'disabled' : '' }} class="px-3 py-2 rounded-lg border border-zinc-300 dark:border-zinc-600 bg-white dark:bg-zinc-800 text-black dark:text-white text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:opacity-50">
                         <option value="">Select Type</option>
                         @foreach ($periodSchedules as $schedule)
-                            <option value="{{ $schedule['id'] }}">{{ $schedule['label'] }}</option>
+                            <option value="{{ $schedule['id'] }}" {{ !$schedule['deadline_passed'] ? 'disabled' : '' }}>
+                                {{ $schedule['label'] }}{{ !$schedule['deadline_passed'] ? ' (Deadline not met)' : '' }}
+                            </option>
                         @endforeach
                     </select>
                     @if($period_schedule_id)
@@ -411,7 +416,7 @@ new #[Layout('components.layouts.lecturer')] class extends Component {
                         class="px-4 py-2 rounded-lg border border-zinc-300 dark:border-zinc-600 bg-white dark:bg-zinc-800 text-black dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500">
                         <option value="">All Types</option>
                         @php
-                            $period = \App\Models\Period::find($filterPeriod);
+                            $period = Period::find($filterPeriod);
                             if ($period) {
                                 $proposalSchedules = $period
                                     ->schedules()
