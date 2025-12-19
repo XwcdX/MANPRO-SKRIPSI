@@ -188,7 +188,7 @@ $save = function (PeriodService $service) {
         if ($e->getMessage() === 'Period already exists') {
             session()->flash('error', 'Period already exists.');
         } else {
-            session()->flash('error', 'Failed to save period.');
+            session()->flash('error', 'Failed to save period: ' . $e->getMessage());
         }
     }
 };
