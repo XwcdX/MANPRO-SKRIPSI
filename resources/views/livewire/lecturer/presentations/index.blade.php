@@ -191,7 +191,7 @@ new #[Layout('components.layouts.lecturer')] class extends Component {
             return [];
         }
 
-        $column = $schedule->type === 'proposal_hearing' ? 'proposal_schedule_id' : 'thesis_schedule_id';
+        $column = $schedule->type === 'proposal_hearing' ? 'proposal_schedule_id' : 'final_schedule_id';
 
         return Student::where('status', 3)
             ->where($column, $this->period_schedule_id)
@@ -219,7 +219,7 @@ new #[Layout('components.layouts.lecturer')] class extends Component {
             $typeCount[$schedule->type]++;
             $label = $schedule->type === 'proposal_hearing' ? "Proposal Hearing {$typeCount[$schedule->type]}" : "Thesis Defense {$typeCount[$schedule->type]}";
 
-            $column = $schedule->type === 'proposal_hearing' ? 'proposal_schedule_id' : 'thesis_schedule_id';
+            $column = $schedule->type === 'proposal_hearing' ? 'proposal_schedule_id' : 'final_schedule_id';
             $totalStudents = Student::where('status', 3)->where($column, $schedule->id)->count();
             $scheduledStudents = ThesisPresentation::where('period_schedule_id', $schedule->id)
                 ->whereHas('student', fn($q) => $q->where('status', 3))

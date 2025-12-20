@@ -324,7 +324,7 @@ class PresentationService
                 if ($scheduleType === 'proposal_hearing') {
                     $updateData['proposal_schedule_id'] = null;
                 } else {
-                    $updateData['thesis_schedule_id'] = null;
+                    $updateData['final_schedule_id'] = null;
                 }
                 
                 $student->update($updateData);
