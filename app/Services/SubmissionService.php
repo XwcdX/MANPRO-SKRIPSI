@@ -109,6 +109,7 @@ class SubmissionService
 
             // update path
             $student->{$field} = $path;
+            $student->status = $student->status >= 5 ? $student->status : 5;
             $student->save();
 
             return [

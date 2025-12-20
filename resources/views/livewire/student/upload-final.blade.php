@@ -13,6 +13,7 @@ new class extends Component {
 
     public string $type = 'proposal'; // proposal | thesis
     public $file;
+    public ?int $status = null;
 
     public ?string $existing_file_url = null;
 
@@ -26,12 +27,18 @@ new class extends Component {
 
         $this->user->refresh();
 
-        if ($this->type === 'proposal' && $this->user->final_proposal_path) {
-            $this->existing_file_url = url(Storage::url($this->user->final_proposal_path));
+        if ($this->type === 'proposal') {
+            $this->status = $this->user->status ?? 4;
+            if($this->user->final_proposal_path){
+                $this->existing_file_url = url(Storage::url($this->user->final_proposal_path));
+            }
         }
 
-        if ($this->type === 'thesis' && $this->user->final_thesis_path) {
-            $this->existing_file_url = url(Storage::url($this->user->final_thesis_path));
+        if ($this->type === 'thesis') {
+            $this->status = $this->user->status ?? 7;
+            if($this->user->final_thesis_path){
+                $this->existing_file_url = url(Storage::url($this->user->final_thesis_path));
+            }
         }
     }
 
@@ -42,13 +49,24 @@ new class extends Component {
             return;
         }
 
-        try {
-            $this->validate([
+        $validator = Validator::make(
+            [
+                'file' => $this->file,
+            ],
+            [
                 'file' => 'required|file|mimes:pdf,doc,docx|max:2048',
-            ]);
-        } catch (\Illuminate\Validation\ValidationException $e) {
-            Log::error('Validasi gagal.', ['errors' => $e->errors()]);
-            $this->dispatch('notify', type: 'error', message: 'Validasi gagal, periksa input Anda.');
+            ]
+        );
+
+        if ($validator->fails()) {
+            $this->dispatch(
+                'notify',
+                type: 'error',
+                message: $validator->errors()->first()
+            );
+
+            $this->setErrorBag($validator->errors());
+
             return;
         }
 
@@ -75,6 +93,10 @@ new class extends Component {
                     'type' => $this->type,
                 ]);
 
+                if($this->status == 4){
+                    $this->status == 5;
+                    $this->dispatch('student-status-updated', status: 5);
+                }
                 $this->dispatch('notify', type: 'success', message: $response['message']);
                 $this->reset(['file']);
                 $this->mount($this->type);
