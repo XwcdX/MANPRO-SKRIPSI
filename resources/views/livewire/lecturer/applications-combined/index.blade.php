@@ -14,6 +14,7 @@ new #[Layout('components.layouts.lecturer')] class extends Component {
     public string $activeTab = 'supervision';
     public string $search = '';
     public string $filterStatus = '';
+    public string $filterPeriod = '';
     
     // Topic application
     public ?TopicApplication $viewingTopic = null;
@@ -39,9 +40,14 @@ new #[Layout('components.layouts.lecturer')] class extends Component {
         $this->resetPage();
     }
 
+    public function updatingFilterPeriod(): void
+    {
+        $this->resetPage();
+    }
+
     public function updatedActiveTab(): void
     {
-        $this->reset('search', 'filterStatus');
+        $this->reset('search', 'filterStatus', 'filterPeriod');
         $this->resetPage();
     }
 
@@ -55,11 +61,15 @@ new #[Layout('components.layouts.lecturer')] class extends Component {
                 $query->where('status', $this->filterStatus);
             }
 
+            if ($this->filterPeriod) {
+                $query->where('period_id', $this->filterPeriod);
+            }
+
             $topicApplications = $query->latest()->paginate(15);
             $supervisionApplications = new \Illuminate\Pagination\LengthAwarePaginator([], 0, 15);
         } else {
             $supervisionApplications = app(SupervisionApplicationService::class)
-                ->getApplicationsForLecturer(auth()->id(), $this->filterStatus ?: null, $this->search)
+                ->getApplicationsForLecturer(auth()->id(), $this->filterStatus ?: null, $this->search, $this->filterPeriod ?: null)
                 ->paginate(15);
             $topicApplications = new \Illuminate\Pagination\LengthAwarePaginator([], 0, 15);
         }
@@ -68,10 +78,13 @@ new #[Layout('components.layouts.lecturer')] class extends Component {
         if ($this->filterStatus) {
             $topicCountQuery->where('status', $this->filterStatus);
         }
+        if ($this->filterPeriod) {
+            $topicCountQuery->where('period_id', $this->filterPeriod);
+        }
         $topicCount = $topicCountQuery->count();
         
         $supervisionCount = app(SupervisionApplicationService::class)
-            ->getApplicationsForLecturer(auth()->id(), $this->filterStatus ?: null, $this->search)
+            ->getApplicationsForLecturer(auth()->id(), $this->filterStatus ?: null, $this->search, $this->filterPeriod ?: null)
             ->count();
 
         return [
@@ -81,6 +94,7 @@ new #[Layout('components.layouts.lecturer')] class extends Component {
             'supervisionCount' => $supervisionCount,
             'currentQuota' => auth()->user()->getAvailableCapacityForPeriod(app(PeriodService::class)->getActivePeriod()?->id ?? null),
             'activePeriod' => app(PeriodService::class)->getActivePeriod(),
+            'periods' => \App\Models\Period::notArchived()->orderBy('start_date', 'desc')->get(),
         ];
     }
 
@@ -254,16 +268,23 @@ new #[Layout('components.layouts.lecturer')] class extends Component {
                 </nav>
             </div>
 
-            <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
                 <select wire:model.live="filterStatus"
                     class="px-4 py-2 rounded-lg border border-zinc-300 dark:border-zinc-600 bg-white dark:bg-zinc-800 text-black dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500">
-                    <option value="">All</option>
+                    <option value="">All Status</option>
                     <option value="pending">Pending</option>
                     <option value="accepted">Accepted</option>
                     <option value="declined">Declined</option>
                     @if($activeTab === 'topics')
                         <option value="quota_full">Quota Full</option>
                     @endif
+                </select>
+                <select wire:model.live="filterPeriod"
+                    class="px-4 py-2 rounded-lg border border-zinc-300 dark:border-zinc-600 bg-white dark:bg-zinc-800 text-black dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500">
+                    <option value="">All Periods</option>
+                    @foreach($periods as $period)
+                        <option value="{{ $period->id }}">{{ $period->name }}</option>
+                    @endforeach
                 </select>
                 @if($activeTab === 'supervision')
                     <input wire:model.live.debounce.300ms="search" type="text" placeholder="Search by student name or email..."

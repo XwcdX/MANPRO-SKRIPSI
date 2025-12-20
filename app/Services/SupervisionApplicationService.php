@@ -72,10 +72,11 @@ class SupervisionApplicationService
         return true;
     }
 
-    public function getApplicationsForLecturer(string $lecturerId, ?string $status, ?string $search = null)
+    public function getApplicationsForLecturer(string $lecturerId, ?string $status, ?string $search = null, ?string $periodId = null)
     {
         return SupervisionApplication::where('lecturer_id', $lecturerId)
             ->when($status, fn($q) => $q->where('status', $status))
+            ->when($periodId, fn($q) => $q->where('period_id', $periodId))
             ->when($search, function ($query) use ($search) {
                 $query->whereHas('student', function ($q) use ($search) {
                     $q->where('name', 'like', '%' . $search . '%')
