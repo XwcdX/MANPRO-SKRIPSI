@@ -2,6 +2,7 @@
 
 namespace App\Services;
 
+use App\Models\Lecturer;
 use App\Models\ThesisPresentation;
 use App\Models\PresentationExaminer;
 use App\Models\LecturerAvailability;
@@ -140,7 +141,6 @@ class PresentationService
     ): array {
         $timeSlot = $startTime . '-' . $endTime;
         
-        // Lecturers assigned to presentations at this time
         $busyFromPresentations = PresentationExaminer::whereHas('thesisPresentation', function ($query) use ($date, $startTime, $endTime, $excludePresentationId) {
             $query->where('presentation_date', $date)
                 ->when($excludePresentationId, function($q) use ($excludePresentationId) {
@@ -176,7 +176,7 @@ class PresentationService
         
         $busyIds = array_merge($busyFromPresentations, $busyFromAvailability, $supervisorIds);
         
-        return \App\Models\Lecturer::whereNotIn('id', $busyIds)
+        return Lecturer::whereNotIn('id', $busyIds)
             ->orderBy('name')
             ->get()
             ->toArray();
@@ -248,7 +248,7 @@ class PresentationService
             }
         }
 
-        $totalLecturers = \App\Models\Lecturer::count();
+        $totalLecturers = Lecturer::count();
         $combinations = [];
 
         foreach ($dates as $date) {
@@ -269,7 +269,7 @@ class PresentationService
                 $combinations[] = [
                     'date' => $date,
                     'time' => $slot,
-                    'label' => \Carbon\Carbon::parse($date)->format('d M Y') . ' • ' . $slot,
+                    'label' => Carbon::parse($date)->format('d M Y') . ' • ' . $slot,
                 ];
             }
         }
@@ -312,22 +312,23 @@ class PresentationService
 
             $student = $presentation->student;
             $oldStatus = $student->status;
+            $scheduleType = $presentation->periodSchedule->type;
             
             if ($decision === 'pass') {
-                $newStatus = 4;
+                if ($scheduleType === 'proposal_hearing') {
+                    $newStatus = 4;
+                } else {
+                    $newStatus = 7;
+                }
                 $student->update(['status' => $newStatus]);
             } else {
-                $newStatus = 2;
-                $scheduleType = $presentation->periodSchedule->type;
-                $updateData = ['status' => $newStatus];
-                
                 if ($scheduleType === 'proposal_hearing') {
-                    $updateData['proposal_schedule_id'] = null;
+                    $newStatus = 2;
+                    $student->update(['status' => $newStatus, 'proposal_schedule_id' => null]);
                 } else {
-                    $updateData['final_schedule_id'] = null;
+                    $newStatus = 5;
+                    $student->update(['status' => $newStatus, 'final_schedule_id' => null]);
                 }
-                
-                $student->update($updateData);
             }
 
             \App\Models\StudentStatusHistory::create([
