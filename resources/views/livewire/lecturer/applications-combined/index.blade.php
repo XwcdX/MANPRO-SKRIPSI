@@ -87,13 +87,16 @@ new #[Layout('components.layouts.lecturer')] class extends Component {
             ->getApplicationsForLecturer(auth()->id(), $this->filterStatus ?: null, $this->search, $this->filterPeriod ?: null)
             ->count();
 
+        $displayPeriodId = $this->filterPeriod ?: app(PeriodService::class)->getActivePeriod()?->id;
+        $displayPeriod = $displayPeriodId ? \App\Models\Period::find($displayPeriodId) : null;
+
         return [
             'topicApplications' => $topicApplications,
             'supervisionApplications' => $supervisionApplications,
             'topicCount' => $topicCount,
             'supervisionCount' => $supervisionCount,
-            'currentQuota' => auth()->user()->getAvailableCapacityForPeriod(app(PeriodService::class)->getActivePeriod()?->id ?? null),
-            'activePeriod' => app(PeriodService::class)->getActivePeriod(),
+            'currentQuota' => $displayPeriodId ? auth()->user()->getAvailableCapacityForPeriod($displayPeriodId) : 0,
+            'displayPeriod' => $displayPeriod,
             'periods' => \App\Models\Period::notArchived()->orderBy('start_date', 'desc')->get(),
         ];
     }
@@ -238,10 +241,10 @@ new #[Layout('components.layouts.lecturer')] class extends Component {
                 <div>
                     <h1 class="text-3xl text-black dark:text-white font-bold">Applications</h1>
                     <p class="text-zinc-600 dark:text-zinc-400 mt-1">Review and manage student applications.</p>
-                    @if ($activePeriod)
+                    @if ($displayPeriod)
                         <div class="mt-3 inline-flex items-center gap-2 px-3 py-1.5 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg">
                             <span class="text-sm text-blue-900 dark:text-blue-200">
-                                Available Quota: <strong>{{ $currentQuota }}</strong> students
+                                Available Quota for {{ $displayPeriod->name }}: <strong>{{ $currentQuota }}</strong> students
                             </span>
                         </div>
                     @endif
