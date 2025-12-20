@@ -339,7 +339,10 @@ new #[Layout('components.layouts.lecturer')] class extends Component {
                                     @if ($filterStatus === 'pending')
                                         <td class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
                                             <div class="flex justify-end items-center gap-2">
-                                                <flux:button wire:click="confirmSupervisionAccept('{{ $application->id }}')" variant="primary" size="sm" class="cursor-pointer" :disabled="$currentQuota <= 0">Accept</flux:button>
+                                                @php
+                                                    $appQuota = auth()->user()->getAvailableCapacityForPeriod($application->period_id);
+                                                @endphp
+                                                <flux:button wire:click="confirmSupervisionAccept('{{ $application->id }}')" variant="primary" size="sm" class="cursor-pointer" :disabled="$appQuota <= 0">Accept</flux:button>
                                                 <flux:button wire:click="confirmSupervisionDecline('{{ $application->id }}')" variant="danger" size="sm" class="cursor-pointer">Decline</flux:button>
                                             </div>
                                         </td>
