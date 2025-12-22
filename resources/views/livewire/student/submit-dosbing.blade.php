@@ -134,7 +134,8 @@ new class extends Component {
                 $this->lecturers1[$dosenAcc1->id] = $dosenAcc1->name;
             }
         }
-        else if($dosenAcc2){
+        
+        if($dosenAcc2){
             if(!array_key_exists($dosenAcc2->id, $this->lecturers2)){
                 $this->lecturers2[$dosenAcc2->id] = $dosenAcc2->name;
             }
