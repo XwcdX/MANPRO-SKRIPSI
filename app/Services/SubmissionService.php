@@ -304,6 +304,18 @@ class SubmissionService
                 $exists->save();
             }
 
+            $alreadyAssigned = $student->lecturers()
+                ->wherePivot('role', $role)
+                ->wherePivot('status', 'active')
+                ->exists();
+
+            if ($alreadyAssigned) {
+                $student->lecturers()
+                ->wherePivot('role', $role)
+                ->wherePivot('status', 'active')
+                ->detach();
+            }
+
             $exists = SupervisionApplication::where('student_id', $student->id)
                 ->where('lecturer_id', $lecturer->id)
                 ->where('proposed_role', $role)

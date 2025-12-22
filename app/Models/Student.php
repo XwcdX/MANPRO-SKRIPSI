@@ -173,4 +173,15 @@ class Student extends Authenticatable implements MustVerifyEmail
     {
         return $this->belongsTo(Division::class);
     }
+
+    public function lecturers()
+    {
+        return $this->belongsToMany(
+            Lecturer::class,
+            'student_lecturers'
+        )
+        ->withPivot(['role', 'status', 'assignment_date', 'is_lead_examiner'])
+        ->withTimestamps();
+    }
+
 }

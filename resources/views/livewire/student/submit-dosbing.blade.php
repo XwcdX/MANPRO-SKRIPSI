@@ -134,7 +134,7 @@ new class extends Component {
                 $this->lecturers1[$dosenAcc1->id] = $dosenAcc1->name;
             }
         }
-        
+
         if($dosenAcc2){
             if(!array_key_exists($dosenAcc2->id, $this->lecturers2)){
                 $this->lecturers2[$dosenAcc2->id] = $dosenAcc2->name;
@@ -232,7 +232,7 @@ new class extends Component {
 
                 <select id="dosbing1"
                     wire:model.live="dosbing1"
-                    @disabled($status1 === 'pending' || $status1 === 'accepted')
+                    @disabled($status1 === 'pending' || $status1 === 'accepted' && !$editMode1)
                     class="bg-gray-100 border border-gray-300 rounded-lg p-2.5 text-sm">
                     <option value="">Pilih dosen...</option>
                     @foreach ($lecturers1 as $id => $name)
