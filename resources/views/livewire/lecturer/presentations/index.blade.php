@@ -191,9 +191,15 @@ new #[Layout('components.layouts.lecturer')] class extends Component {
             return [];
         }
 
-        $column = $schedule->type === 'proposal_hearing' ? 'proposal_schedule_id' : 'thesis_schedule_id';
+        if ($schedule->type === 'proposal_hearing') {
+            $status = 3;
+            $column = 'proposal_schedule_id';
+        } else {
+            $status = 6;
+            $column = 'final_schedule_id';
+        }
 
-        return Student::where('status', 3)
+        return Student::where('status', $status)
             ->where($column, $this->period_schedule_id)
             ->when(!empty($scheduledStudentIds), function ($q) use ($scheduledStudentIds) {
                 $q->whereNotIn('id', $scheduledStudentIds);
@@ -219,10 +225,11 @@ new #[Layout('components.layouts.lecturer')] class extends Component {
             $typeCount[$schedule->type]++;
             $label = $schedule->type === 'proposal_hearing' ? "Proposal Hearing {$typeCount[$schedule->type]}" : "Thesis Defense {$typeCount[$schedule->type]}";
 
-            $column = $schedule->type === 'proposal_hearing' ? 'proposal_schedule_id' : 'thesis_schedule_id';
-            $totalStudents = Student::where('status', 3)->where($column, $schedule->id)->count();
+            $column = $schedule->type === 'proposal_hearing' ? 'proposal_schedule_id' : 'final_schedule_id';
+            $status = $schedule->type === 'proposal_hearing' ? 3 : 6;
+            $totalStudents = Student::where('status', $status)->where($column, $schedule->id)->count();
             $scheduledStudents = ThesisPresentation::where('period_schedule_id', $schedule->id)
-                ->whereHas('student', fn($q) => $q->where('status', 3))
+                ->whereHas('student', fn($q) => $q->where('status', $status))
                 ->count();
             $unscheduled = $totalStudents - $scheduledStudents;
             
