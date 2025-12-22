@@ -82,6 +82,10 @@ class Lecturer extends Authenticatable implements MustVerifyEmail
         ->where('period_id', $periodId)
         ->value('max_students');
 
+        $period = Period::find($periodId);
+
+        $maxStudents = $maxStudents ? $maxStudents : $period->default_quota;
+
         return $this->activeSupervisions()->count() >= $maxStudents;
     }
 
