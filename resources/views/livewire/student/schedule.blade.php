@@ -254,7 +254,7 @@ new class extends Component {
                     <div class="bg-gray-100 p-4 rounded-lg shadow">
 
                         <h2 class="text-lg font-semibold text-gray-800 mb-2">
-                            Sidang Proposal {{ $i }}
+                            Sidang {{ $type == 'proposal' ? 'Proposal' : 'Skripsi' }} {{ $i }}
                         </h2>
 
                         <p class="text-sm text-gray-700">Akhir Pendaftaran: {{ $deadline->translatedFormat('d F Y') }}</p>
