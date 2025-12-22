@@ -19,7 +19,7 @@ class ScheduleSelectionService
             throw new Exception("Jadwal tidak ditemukan.");
         }
 
-        $deadline = Carbon::parse($schedule->start_date)->subWeek();
+        $deadline = $schedule->deadline;
 
         if (now()->greaterThan($deadline)) {
             throw new Exception("Batas pendaftaran jadwal sudah dilewati.");
@@ -45,7 +45,7 @@ class ScheduleSelectionService
             throw new Exception("Jadwal tidak ditemukan.");
         }
 
-        $deadline = Carbon::parse($schedule->start_date)->subWeek();
+        $deadline = $schedule->deadline;
 
         if (now()->greaterThan($deadline)) {
             throw new Exception("Batas pembatalan jadwal sudah terlewati.");

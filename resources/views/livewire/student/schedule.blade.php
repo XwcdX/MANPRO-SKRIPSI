@@ -12,7 +12,7 @@ new class extends Component {
 
     public $presentation = null;
 
-    public array $schedules = [];
+    public $schedules;
     public ?string $selectedScheduleId = null;
 
     public ?string $tanggal = '';
@@ -51,8 +51,7 @@ new class extends Component {
         $this->schedules = PeriodSchedule::where('period_id', $periodId)
             ->where('type', $scheduleType)
             ->orderBy('start_date', 'asc')
-            ->get()
-            ->toArray();
+            ->get();
 
         $this->selectedScheduleId = $this->user->$column;
 
@@ -223,7 +222,7 @@ new class extends Component {
             Jadwal Sidang {{ $type === 'final' ? 'Skripsi' : 'Proposal' }}
         </h1>
 
-        @if($selectedScheduleId && $this->selectedSchedule && now()->greaterThan(\Carbon\Carbon::parse($this->selectedSchedule->deadline)))
+        @if($selectedScheduleId && $this->selectedSchedule && now()->greaterThan($this->selectedSchedule->deadline))
             <div class="w-full max-w-sm sm:max-w-lg bg-gray-100 p-6 md:p-10 rounded-lg shadow-xl relative">
                 @if($lokasi && $tanggal && $jam)
                     <div class="text-center space-y-3 md:space-y-4">
@@ -244,11 +243,13 @@ new class extends Component {
                 @foreach($schedules as $i => $s)
                     @php
                         $i++;
-                        $start = \Carbon\Carbon::parse($s['start_date'])->locale('id');
-                        $end = \Carbon\Carbon::parse($s['end_date'])->locale('id');
-                        $deadline = \Carbon\Carbon::parse($s['deadline'])->locale('id');
+
+                        $start = $s->start_date;
+                        $end = $s->end_date;
+                        $deadline = $s->deadline;
+
                         $now = now();
-                        $canAction = $now->lessThan($deadline);
+                        $canAction = $now->lessThanOrEqualTo($deadline->endOfDay());
                     @endphp
 
                     <div class="bg-gray-100 p-4 rounded-lg shadow">
@@ -262,7 +263,7 @@ new class extends Component {
                         <p class="text-sm text-gray-700 mb-4">Sidang Berakhir: {{ $end->translatedFormat('d F Y') }}</p>
 
                         @if($canAction)
-                            @if($selectedScheduleId == $s['id'])
+                            @if($selectedScheduleId == $s->id)
                                 <button
                                     wire:click="confirmCancel"
                                     class="w-full bg-red-600 text-white py-2 rounded cursor-pointer">
