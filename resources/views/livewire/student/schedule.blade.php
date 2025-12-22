@@ -223,7 +223,7 @@ new class extends Component {
             Jadwal Sidang {{ $type === 'final' ? 'Skripsi' : 'Proposal' }}
         </h1>
 
-        @if($selectedScheduleId && $this->selectedSchedule && now()->greaterThan($this->selectedSchedule->deadline))
+        @if($selectedScheduleId && $this->selectedSchedule && now()->greaterThan(\Carbon\Carbon::parse($this->selectedSchedule->deadline)))
             <div class="w-full max-w-sm sm:max-w-lg bg-gray-100 p-6 md:p-10 rounded-lg shadow-xl relative">
                 @if($lokasi && $tanggal && $jam)
                     <div class="text-center space-y-3 md:space-y-4">
@@ -244,9 +244,9 @@ new class extends Component {
                 @foreach($schedules as $i => $s)
                     @php
                         $i++;
-                        $start = $s['start_date']->locale('id');
-                        $end = $s['end_date']->locale('id');
-                        $deadline = $s['deadline']->locale('id');
+                        $start = \Carbon\Carbon::parse($s['start_date'])->locale('id');
+                        $end = \Carbon\Carbon::parse($s['end_date'])->locale('id');
+                        $deadline = \Carbon\Carbon::parse($s['deadline'])->locale('id');
                         $now = now();
                         $canAction = $now->lessThan($deadline);
                     @endphp
